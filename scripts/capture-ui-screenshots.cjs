@@ -51,7 +51,8 @@ async function capture() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
   const pageErrors = [];
-  page.on('pageerror', error => pageErrors.push(error.message));
+  let currentScreen = 'startup';
+  page.on('pageerror', error => pageErrors.push({ screen: currentScreen, stack: error.stack ?? error.message }));
   const sections = [
     ['Overview', '01-overview-desktop.png'],
     ['Population', '02-population-desktop.png'],
@@ -66,6 +67,7 @@ async function capture() {
     await page.locator('mm-root').waitFor({ state: 'visible' });
     await page.waitForTimeout(1000);
     for (const [section, filename] of sections) {
+      currentScreen = `${section} desktop`;
       if (section !== 'Overview') {
         await page.locator('ui-side-nav').getByText(section, { exact: true }).click();
         await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
@@ -77,11 +79,18 @@ async function capture() {
     await page.goto(`http://127.0.0.1:${port}`, { waitUntil: 'domcontentloaded' });
     await page.locator('mm-root').waitFor({ state: 'visible' });
     await page.waitForTimeout(500);
-    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
-    await page.screenshot({ path: path.join(output, '07-overview-mobile.png'), fullPage: true });
-    if (mobileOverflow) throw new Error('Overview layout overflows horizontally at 390px.');
-    if (pageErrors.length) throw new Error(`Browser errors: ${pageErrors.join(' | ')}`);
-    console.log(`Captured ${sections.length + 1} UI screenshots in ${output}`);
+    for (const [section, filename] of sections) {
+      currentScreen = `${section} mobile`;
+      if (section !== 'Overview') {
+        await page.locator('ui-side-nav').getByText(section, { exact: true }).click();
+        await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
+      }
+      const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      if (mobileOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 390px width.' });
+      await page.screenshot({ path: path.join(output, filename.replace('-desktop', '-mobile')), fullPage: true });
+    }
+    if (pageErrors.length) throw new Error(`UI issues: ${JSON.stringify(pageErrors)}`);
+    console.log(`Captured ${sections.length * 2} UI screenshots in ${output}`);
   } finally {
     await browser.close();
     await new Promise(resolve => server.close(resolve));
