@@ -27,10 +27,15 @@ export interface RouteResult extends Record<string, unknown> {
 }
 export interface MapFeaturePage<T> { features: T[]; truncated: boolean; }
 export interface RoadFeature { id: string; name: string | null; roadClass: string; coordinates: { latitude: number; longitude: number }[]; }
-export interface RoadworkFeature { permitId: string; permitNumber: string; locationDescription: string; impactType: number; startsAt: string; endsAt: string; coordinates: { latitude: number; longitude: number }[]; }
+export interface RoadworkFeature { permitId: string; permitNumber: string; locationDescription: string; impactType: number; startsAt: string; endsAt: string; coordinates: { latitude: number; longitude: number }[]; approvalState: string; }
+export interface PermitExtraction {
+  permitNumber: string | null; locationDescription: string | null; workDescription: string | null; contractor: string | null; impactType: string | null;
+  startDate: string | null; startTime: string | null; endDate: string | null; endTime: string | null; dailyStart: string | null; dailyEnd: string | null; streetNames: string[];
+}
 export interface UpdatePermitRequest {
   permitNumber: string; locationDescription: string; workDescription: string; contractor: string | null;
   impactType: number; startsAt: string; endsAt: string; dailyStart: string | null; dailyEnd: string | null; revision: number;
+  streetNames?: string[];
 }
 export type VehicleType = 'motorcycle' | 'car' | 'bicycle' | 'walking';
 export interface RouteRequest {
@@ -52,6 +57,9 @@ export class MaleMoveApi {
   }
   updatePermit(id: string, request: UpdatePermitRequest): Observable<ApiEnvelope<PermitSummary>> {
     return this.http.put<ApiEnvelope<PermitSummary>>(`/api/v1/permits/${encodeURIComponent(id)}`, request);
+  }
+  extractPermit(id: string): Observable<ApiEnvelope<PermitExtraction>> {
+    return this.http.post<ApiEnvelope<PermitExtraction>>(`/api/v1/permits/${encodeURIComponent(id)}/extract`, {});
   }
   submitPermit(id: string): Observable<ApiEnvelope<PermitSummary>> {
     return this.http.post<ApiEnvelope<PermitSummary>>(`/api/v1/permits/${encodeURIComponent(id)}/submit`, {});

@@ -8,6 +8,8 @@ import { UiButton } from '@zouriel/ui/button';
 import { UiBadge } from '@zouriel/ui/badge';
 import { UiSideNav, type UiSideNavGroup } from '@zouriel/ui/navigation';
 import { UiFormRenderer, type UiFormSubmission } from '@zouriel/ui/form-builder';
+import { UiFileUpload } from '@zouriel/ui/form';
+import { HttpErrorResponse } from '@angular/common/http';
 import { UiTable, type UiColumn } from '@zouriel/ui/table';
 import { UiEmptyState } from '@zouriel/ui/feedback';
 import { AuthSession } from './core/auth-session.service';
@@ -23,7 +25,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
 @Component({
   selector: 'mm-root',
   standalone: true,
-  imports: [LoginComponent, RoutePlannerComponent, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
+  imports: [LoginComponent, RoutePlannerComponent, UiFileUpload, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (localSignIn.enabled && !auth.configured) { <mm-login /> } @else {
@@ -47,7 +49,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
           <ui-card class="map-panel" padding="md">
             <div class="panel-heading"><div><p class="eyebrow">GEOGRAPHIC OVERVIEW</p><h3>Greater Malé map</h3></div><ui-badge>{{ roadCount() ? workCount() + ' active roadworks' : 'Loading layers' }}</ui-badge></div>
             <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="13" [markers]="permitDots()" markerLabels="none" /></div>
-            <p class="map-note">Each amber dot is an approved roadwork in effect now.</p>
+            <p class="map-note">Amber dots are approved roadworks in effect now; grey dots are awaiting review.</p>
           </ui-card>
           <ui-card class="data-panel overview-permits" padding="md"><div class="panel-heading"><div><p class="eyebrow">ROADWORKS & APPROVALS</p><h3>Permits</h3></div><ui-button variant="outline" (click)="selectPage('Permits')">Open permits</ui-button></div>
             <ui-table [columns]="permitColumns" [data]="permitRows()" emptyText="No permits yet." />
@@ -65,7 +67,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
         } @else if (page() === 'Mobility map') {
           <ui-card class="map-panel full-map" padding="md"><div class="panel-heading"><div><p class="eyebrow">SPATIAL ANALYSIS</p><h3>Mobility access map</h3></div></div>
             @if (mapError()) { <div class="api-error" role="alert">{{ mapError() }}</div> }
-            <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="13" [markers]="permitDots()" markerLabels="none" /></div><p class="map-note">Each amber dot is an approved roadwork in effect now. Route checks go around them.</p></ui-card>
+            <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="13" [markers]="permitDots()" markerLabels="none" /></div><p class="map-note">Amber dots are approved roadworks in effect now; route checks go around them. Grey dots are awaiting review.</p></ui-card>
         } @else if (page() === 'Population') {
           <ui-card class="data-panel" padding="md"><div class="panel-heading"><div><p class="eyebrow">OFFICIAL BASELINES & PUBLISHED PROJECTIONS</p><h3>Population series</h3></div></div>
             @if (populationError()) { <div class="api-error" role="alert">{{ populationError() }}</div> }
@@ -76,8 +78,16 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
           <ui-card class="data-panel permit-entry" padding="md"><div class="panel-heading"><div><p class="eyebrow">PERMIT OFFICER</p><h3>Register a permit</h3></div><ui-badge>Human review required</ui-badge></div>
             <p class="muted">The original is scanned before it is stored. Submitted details remain pending until an authorized approver confirms the document and affected road segment.</p>
             @if (permitCreateError()) { <div class="api-error" role="alert">{{ permitCreateError() }}</div> }
-            @if (permitCreated()) { <div class="success-message" role="status">Permit uploaded and submitted. It cannot affect routing until approved and mapped to a road segment.</div> }
-            <ui-form-renderer [definition]="permitForm" (submitted)="createPermit($event)" [busy]="permitCreateBusy()" />
+            @if (permitCreated()) { <div class="success-message" role="status">Submitted. It is on the map now as a grey dot and turns amber once approved.</div> }
+            @if (permitReading()) {
+              <div class="reading" role="status">Reading your permit…</div>
+            } @else if (!pendingPermit()) {
+              <ui-file-upload accept=".pdf,.jpg,.jpeg,.png" label="Upload the permit" hint="PDF, JPEG or PNG up to 25 MB. The details are read from it and filled in for you to check." (filesSelected)="readPermit($event)" />
+            } @else {
+              @if (permitReadNote()) { <p class="muted">{{ permitReadNote() }}</p> }
+              <ui-form-renderer [definition]="permitForm" [data]="permitPrefill()" (submitted)="createPermit($event)" [busy]="permitCreateBusy()" />
+              <ui-button variant="ghost" size="sm" (click)="startOver()">Use a different file</ui-button>
+            }
           </ui-card>
           <ui-card class="data-panel" padding="md"><div class="panel-heading"><div><p class="eyebrow">ROADWORKS & APPROVALS</p><h3>Permit register</h3></div></div>
             @if (permitsError()) { <div class="api-error" role="alert">{{ permitsError() }}</div> }
@@ -142,6 +152,10 @@ export class AppComponent {
   readonly permitCreateError = signal('');
   readonly permitCreated = signal(false);
   readonly pendingPermit = signal<{ id: string; revision: number; phase: 'uploaded' | 'updated' } | null>(null);
+  readonly permitReading = signal(false);
+  readonly permitReadNote = signal('');
+  readonly permitPrefill = signal<Record<string, unknown>>({});
+  private permitStreets: string[] = [];
   readonly populationRows = signal<PopulationRow[]>([]);
   readonly populationBusy = signal(false);
   readonly populationError = signal('');
@@ -198,14 +212,7 @@ export class AppComponent {
     this.permitCreateBusy.set(true); this.permitCreateError.set(''); this.permitCreated.set(false);
     try {
       let pending = this.pendingPermit();
-      if (!pending) {
-        const file = event.files['permit_document']?.[0];
-        if (!file) throw new Error('Choose the original permit document.');
-        const uploaded = await firstValueFrom(this.api.uploadPermit(file));
-        if (!uploaded.success || !uploaded.data?.id) throw new Error('Upload was not accepted.');
-        pending = { id: uploaded.data.id, revision: uploaded.data.revision, phase: 'uploaded' };
-        this.pendingPermit.set(pending);
-      }
+      if (!pending) throw new Error('Upload the permit first.');
       const localInstant = (dateKey: string, timeKey: string): string => {
         const date = String(data[dateKey] ?? ''), time = String(data[timeKey] ?? '');
         if (!this.isValidLocalDateTime(date, time)) throw new Error('Enter valid permit dates and times.');
@@ -232,6 +239,7 @@ export class AppComponent {
           dailyStart: dailyTime('daily_start'),
           dailyEnd: dailyTime('daily_end'),
           revision: pending.revision,
+          streetNames: this.permitStreets,
         };
         const updated = await firstValueFrom(this.api.updatePermit(pending.id, update));
         if (!updated.success || !updated.data) throw new Error('Permit details were not saved.');
@@ -240,14 +248,51 @@ export class AppComponent {
       }
       const submitted = await firstValueFrom(this.api.submitPermit(pending.id));
       if (!submitted.success) throw new Error('Permit was saved but could not be submitted.');
-      this.pendingPermit.set(null);
+      this.pendingPermit.set(null); this.permitPrefill.set({}); this.permitReadNote.set(''); this.permitStreets = [];
       this.permitCreated.set(true);
       await Promise.all([this.loadPermits(), this.loadMap()]);
-    } catch {
-      this.permitCreateError.set('Permit submission failed. Confirm sign-in, permit officer access, valid dates and scanner availability. If the document was already uploaded, submit again to resume with the existing pending record.');
+    } catch (error) {
+      this.permitCreateError.set(this.apiMessage(error) ?? (error instanceof Error && error.message ? error.message : 'The permit could not be submitted. Check the dates and try again.'));
     } finally {
       this.permitCreateBusy.set(false);
     }
+  }
+  /** Upload the permit (malware-scanned), then read its details to prefill the form. */
+  async readPermit(files: File[]): Promise<void> {
+    const file = files[0];
+    if (!file) return;
+    this.permitCreateError.set(''); this.permitCreated.set(false); this.permitReading.set(true);
+    try {
+      const uploaded = await firstValueFrom(this.api.uploadPermit(file));
+      if (!uploaded.success || !uploaded.data?.id) throw new Error('The upload was not accepted.');
+      this.pendingPermit.set({ id: uploaded.data.id, revision: uploaded.data.revision, phase: 'uploaded' });
+      try {
+        const read = await firstValueFrom(this.api.extractPermit(uploaded.data.id));
+        const x = read.data;
+        this.permitStreets = x?.streetNames ?? [];
+        const impact = ({ FullClosure: '0', PartialRestriction: '1', LaneRestriction: '2' } as Record<string, string>)[x?.impactType ?? ''];
+        const entries: [string, unknown][] = [
+          ['permit_number', x?.permitNumber], ['location_description', x?.locationDescription], ['work_description', x?.workDescription],
+          ['contractor', x?.contractor], ['impact_type', impact], ['starts_date', x?.startDate], ['starts_time', x?.startTime],
+          ['ends_date', x?.endDate], ['ends_time', x?.endTime], ['daily_start', x?.dailyStart], ['daily_end', x?.dailyEnd],
+        ];
+        this.permitPrefill.set(Object.fromEntries(entries.filter(([, v]) => v !== null && v !== undefined && v !== '')));
+        this.permitReadNote.set('Filled in from the permit. Check each field before submitting.');
+      } catch (error) {
+        this.permitPrefill.set({});
+        this.permitReadNote.set(`${this.apiMessage(error) ?? 'The permit could not be read automatically.'} Fill in the details below.`);
+      }
+    } catch (error) {
+      this.permitCreateError.set(this.apiMessage(error) ?? 'The permit could not be uploaded. Try again.');
+    } finally {
+      this.permitReading.set(false);
+    }
+  }
+  startOver(): void {
+    this.pendingPermit.set(null); this.permitPrefill.set({}); this.permitReadNote.set(''); this.permitStreets = []; this.permitCreateError.set('');
+  }
+  private apiMessage(error: unknown): string | undefined {
+    return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : undefined;
   }
   async loadSources(): Promise<void> {
     this.sourcesBusy.set(true); this.sourcesError.set('');
