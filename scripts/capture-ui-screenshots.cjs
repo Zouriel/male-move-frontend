@@ -90,6 +90,7 @@ async function capture() {
         }
         await navigationItem.click();
         await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
+        await navigationItem.waitFor({ state: 'hidden' });
       }
       const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       if (mobileOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 390px width.' });

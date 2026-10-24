@@ -23,7 +23,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
   imports: [UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-sidebar-layout class="app-shell" [sidebarWidth]="'250px'">
+    <ui-sidebar-layout class="app-shell" [sidebarWidth]="'250px'" [open]="navOpen()" (openChange)="navOpen.set($event)">
       <div sidebar-header class="brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Mobility intelligence</small></span></div>
       <ui-side-nav sidebar [groups]="navGroups" [active]="page()" (navigate)="selectPage($event.value)" label="Planning areas" />
       <div sidebar-footer class="sidebar-foot"><span class="status-dot"></span><span>Planning workspace<small>Data connection pending</small></span></div>
@@ -98,6 +98,7 @@ export class AppComponent {
   private readonly api = inject(MaleMoveApi);
   readonly pages: Page[] = ['Overview', 'Population', 'Mobility map', 'Permits', 'Route scenarios', 'Data & methodology'];
   readonly page = signal<Page>('Overview');
+  readonly navOpen = signal(false);
   readonly routeForm = ROUTE_FORM;
   readonly permitForm = PERMIT_FORM;
   readonly permitCreateBusy = signal(false);
@@ -147,7 +148,11 @@ export class AppComponent {
     { key: 'estimatedArrival', header: 'Estimated arrival' },
     { key: 'affectedPermitIds', header: 'Affected permits', format: (value) => Array.isArray(value) ? String(value.length) : '0' },
   ];
-  selectPage(value: string): void { if (this.pages.includes(value as Page)) this.page.set(value as Page); }
+  selectPage(value: string): void {
+    if (!this.pages.includes(value as Page)) return;
+    this.page.set(value as Page);
+    this.navOpen.set(false);
+  }
   async loadPopulation(): Promise<void> {
     this.populationBusy.set(true); this.populationError.set('');
     try { const r = await firstValueFrom(this.api.population()); this.populationRows.set(r.data?.items ?? []); }
