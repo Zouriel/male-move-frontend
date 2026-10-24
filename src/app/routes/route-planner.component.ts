@@ -7,6 +7,7 @@ import { UiDrawer } from '@zouriel/ui/dialog';
 import { UiProgressBar } from '@zouriel/ui/progress';
 import { MaleMoveApi, type RouteAlternative, type VehicleType } from '../data/male-move-api.service';
 import { permitMarkers } from '../data/permit-markers';
+import { countUp, tween } from '../core/motion';
 
 const VEHICLES: { value: VehicleType; label: string; hint: string }[] = [
   { value: 'motorcycle', label: 'Motorcycle', hint: 'Default · filters through traffic' },
@@ -46,9 +47,9 @@ const VEHICLES: { value: VehicleType; label: string; hint: string }[] = [
 
         @if (route(); as r) {
           <div class="planner-result" animate.enter="ui-slide-up-enter" animate.leave="ui-slide-down-leave" aria-live="polite">
-            <div class="result-time"><b>{{ minutes(r.estimatedDurationSeconds) }}</b><span>by {{ vehicleLabel().toLowerCase() }}</span></div>
+            <div class="result-time"><b>{{ minutes(shownSeconds() ?? r.estimatedDurationSeconds) }}</b><span>by {{ vehicleLabel().toLowerCase() }}</span></div>
             <div class="result-meta">
-              <span>{{ km(r.distanceMeters) }}</span>
+              <span>{{ km(shownMeters() ?? r.distanceMeters) }}</span>
               <span class="dot-sep" aria-hidden="true"></span>
               <span>Arrive {{ clock(r.estimatedArrival) }}</span>
             </div>
@@ -81,6 +82,10 @@ export class RoutePlannerComponent {
   readonly error = signal('');
   readonly route = signal<RouteAlternative | null>(null);
   readonly avoidsRoadworks = signal(true);
+  private readonly drawn = signal(1);
+  private stopDraw = () => {};
+  readonly shownSeconds = countUp(() => this.route()?.estimatedDurationSeconds ?? null, 700);
+  readonly shownMeters = countUp(() => this.route()?.distanceMeters ?? null, 700);
   readonly step = computed(() => (!this.from() ? 1 : !this.to() || !this.route() ? 2 : 3));
   /** Searching rings: on the start while waiting for the destination, and while the route is worked out. */
   readonly pulse = computed<UiMapPulse | null>(() => {
@@ -116,7 +121,10 @@ export class RoutePlannerComponent {
   });
   readonly lines = computed<UiMapRoute[]>(() => {
     const r = this.route();
-    return r ? [{ id: 'route', tone: 'primary', label: `Route, ${this.km(r.distanceMeters)}`, points: r.geometry.map((p) => ({ lat: p.latitude, lng: p.longitude })) }] : [];
+    if (!r) return [];
+    // The line draws itself from start to destination.
+    const count = Math.max(2, Math.ceil(r.geometry.length * this.drawn()));
+    return [{ id: 'route', tone: 'primary', label: `Route, ${this.km(r.distanceMeters)}`, points: r.geometry.slice(0, count).map((p) => ({ lat: p.latitude, lng: p.longitude })) }];
   });
 
   tapped(point: UiLatLng): void {
@@ -153,7 +161,10 @@ export class RoutePlannerComponent {
       }));
       const best = response.data?.alternatives[0];
       if (!response.success || !best) throw new Error();
+      this.stopDraw();
+      this.drawn.set(0);
       this.route.set(best);
+      this.stopDraw = tween(750, (p) => this.drawn.set(p));
       this.avoidsRoadworks.set(!(response.data?.assumptions ?? []).some((a) => a.startsWith('No route avoids')));
       // Frame the route clear of the floating step panel (top) and result card (bottom).
       this.map()?.fitPoints([...best.geometry.map((p) => ({ lat: p.latitude, lng: p.longitude })), from, to], { padding: { top: 170, bottom: 150, left: 32, right: 32 } });
