@@ -131,7 +131,8 @@ export class AppComponent {
   ];
   readonly permitColumns: UiColumn<PermitSummary>[] = [
     { key: 'permitNumber', header: 'Permit', sortable: true }, { key: 'locationDescription', header: 'Location' },
-    { key: 'impactType', header: 'Restriction', sortable: true }, { key: 'approvalState', header: 'Status', sortable: true },
+    { key: 'impactType', header: 'Restriction', sortable: true, format: (value) => this.impactLabel(value) },
+    { key: 'approvalState', header: 'Status', sortable: true, format: (value) => this.approvalLabel(value) },
     { key: 'startsAt', header: 'Starts', sortable: true }, { key: 'endsAt', header: 'Ends', sortable: true },
   ];
   readonly sourceColumns: UiColumn<DataSource>[] = [
@@ -280,6 +281,12 @@ export class AppComponent {
     }
   }
   sectionLabel(page: Page): string { return ({ Population: 'PEOPLE & PROJECTIONS', Permits: 'ROADWORKS & APPROVALS', 'Route scenarios': 'TIME-DEPENDENT PLANNING', 'Data & methodology': 'PROVENANCE & METHODS' } as Partial<Record<Page, string>>)[page] ?? 'PLANNING'; }
+  private impactLabel(value: unknown): string {
+    return ({ 0: 'Full closure', 1: 'Partial restriction', 2: 'Lane restriction', 3: 'Unknown' } as Record<number, string>)[Number(value)] ?? 'Unknown';
+  }
+  private approvalLabel(value: unknown): string {
+    return ({ 0: 'Draft', 1: 'Needs review', 2: 'Submitted', 3: 'Approved', 4: 'Rejected' } as Record<number, string>)[Number(value)] ?? 'Unknown';
+  }
   private isValidLocalDateTime(date: string, time: string): boolean {
     return this.isValidCalendarDate(date) && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   }

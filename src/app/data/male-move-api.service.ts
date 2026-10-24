@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export interface ApiEnvelope<T> { success: boolean; data: T; message?: string; }
 export interface PermitSummary extends Record<string, unknown> {
   id: string; permitNumber: string; locationDescription: string; workDescription: string;
-  approvalState: string; impactType: string; startsAt: string | null; endsAt: string | null;
+  approvalState: number; impactType: number; startsAt: string | null; endsAt: string | null;
   revision: number;
 }
 export interface PopulationRow extends Record<string, unknown> {
@@ -27,7 +27,7 @@ export interface RouteResult extends Record<string, unknown> {
 }
 export interface MapFeaturePage<T> { features: T[]; truncated: boolean; }
 export interface RoadFeature { id: string; name: string | null; roadClass: string; coordinates: { latitude: number; longitude: number }[]; }
-export interface RoadworkFeature { permitId: string; permitNumber: string; locationDescription: string; impactType: string; startsAt: string; endsAt: string; coordinates: { latitude: number; longitude: number }[]; }
+export interface RoadworkFeature { permitId: string; permitNumber: string; locationDescription: string; impactType: number; startsAt: string; endsAt: string; coordinates: { latitude: number; longitude: number }[]; }
 export interface UpdatePermitRequest {
   permitNumber: string; locationDescription: string; workDescription: string; contractor: string | null;
   impactType: number; startsAt: string; endsAt: string; dailyStart: string | null; dailyEnd: string | null; revision: number;
