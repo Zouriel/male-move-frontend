@@ -2,7 +2,7 @@
   "name": "male-move-frontend",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "start": "ng serve", "build": "ng build --configuration production", "ui:capture": "node scripts/capture-ui-screenshots.cjs" },
+  "scripts": { "start": "ng serve", "build": "ng build --configuration production", "build:staging": "ng build --configuration staging", "ui:capture": "node scripts/capture-ui-screenshots.cjs" },
   "dependencies": {
     "@angular/common": "^22.0.0",
     "@angular/compiler": "^22.0.0",

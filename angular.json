@@ -19,11 +19,13 @@
             "assets": []
           },
           "configurations": {
-            "production": { "optimization": true, "outputHashing": "all", "sourceMap": false, "budgets": [{ "type": "initial", "maximumWarning": "1.2mb", "maximumError": "2mb" }] }
+            "production": { "optimization": true, "outputHashing": "all", "sourceMap": false, "budgets": [{ "type": "initial", "maximumWarning": "1.2mb", "maximumError": "2mb" }] },
+            "staging": { "optimization": true, "outputHashing": "all", "sourceMap": false, "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.local.ts" }] },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true, "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.local.ts" }] }
           },
           "defaultConfiguration": "production"
         },
-        "serve": { "builder": "@angular/build:dev-server", "options": { "proxyConfig": "proxy.conf.json" }, "configurations": { "production": { "buildTarget": "male-move:build:production" }, "development": { "buildTarget": "male-move:build" } }, "defaultConfiguration": "development" }
+        "serve": { "builder": "@angular/build:dev-server", "options": { "proxyConfig": "proxy.conf.json" }, "configurations": { "production": { "buildTarget": "male-move:build:production" }, "development": { "buildTarget": "male-move:build:development" } }, "defaultConfiguration": "development" }
       }
     }
   }

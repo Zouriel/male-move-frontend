@@ -1,10 +1,11 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 
 /** OIDC integration seam. Access tokens stay in memory and are never persisted in browser storage. */
 @Injectable({ providedIn: 'root' })
 export class AuthSession {
   private readonly accessToken = signal<string | null>(null);
-  readonly configured = false;
+  private readonly signedIn = computed(() => this.accessToken() !== null);
+  get configured(): boolean { return this.signedIn(); }
   token(): string | null { return this.accessToken(); }
 
   /** Called only by the configured OIDC authorization-code + PKCE callback adapter. */
