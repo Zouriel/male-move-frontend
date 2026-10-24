@@ -199,6 +199,7 @@ async function capture() {
         await navigationItem.click();
         await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
         await navigationItem.waitFor({ state: 'hidden' });
+        if (await page.evaluate(() => window.scrollY) !== 0) pageErrors.push({ screen: currentScreen, stack: 'Navigation did not return the phone view to the top of the page.' });
       }
       const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       if (mobileOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 390px width.' });
@@ -249,6 +250,7 @@ async function capture() {
         await navigationItem.click();
         await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
         await navigationItem.waitFor({ state: 'hidden' });
+        if (await page.evaluate(() => window.scrollY) !== 0) pageErrors.push({ screen: currentScreen, stack: 'Navigation did not return the narrow phone view to the top of the page.' });
       }
       const narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       if (narrowOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 320px width.' });

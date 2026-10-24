@@ -33,7 +33,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
       </header>
       <div class="page-content">
         @if (page() === 'Overview') {
-          <section class="welcome-row"><div><p class="eyebrow">PLANNING SNAPSHOT</p><h2>See how the city moves.</h2><p class="muted">Population, access and approved roadworks in one planning workspace.</p></div><ui-button variant="primary" (click)="page.set('Route scenarios')">Plan a route</ui-button></section>
+          <section class="welcome-row"><div><p class="eyebrow">PLANNING SNAPSHOT</p><h2>See how the city moves.</h2><p class="muted">Population, access and approved roadworks in one planning workspace.</p></div><ui-button variant="primary" (click)="selectPage('Route scenarios')">Plan a route</ui-button></section>
           <div class="metric-grid">
             <ui-stat-card label="Population baseline" value="—" />
             <ui-stat-card label="Active approved works" value="—" />
@@ -152,6 +152,7 @@ export class AppComponent {
     if (!this.pages.includes(value as Page)) return;
     this.page.set(value as Page);
     this.navOpen.set(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
   }
   async loadPopulation(): Promise<void> {
     this.populationBusy.set(true); this.populationError.set('');
