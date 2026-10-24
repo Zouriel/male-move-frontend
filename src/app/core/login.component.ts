@@ -19,7 +19,7 @@ import { LocalSignIn } from './dev-sign-in';
         <p class="muted">Planning workspace for authorized staff.</p>
         <form class="login-form" (ngSubmit)="submit()">
           <ui-form-field label="Username">
-            <ui-input name="username" autocomplete="username" [(ngModel)]="username" [invalid]="!!error()" />
+            <ui-input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" [(ngModel)]="username" [invalid]="!!error()" />
           </ui-form-field>
           <ui-form-field label="Password" [error]="error() || undefined">
             <ui-password-input name="password" [(ngModel)]="password" [invalid]="!!error()" />
@@ -40,7 +40,8 @@ export class LoginComponent {
   async submit(): Promise<void> {
     if (!this.username || !this.password || this.busy()) return;
     this.busy.set(true); this.error.set('');
-    const result = await this.signIn.signIn(this.username.trim(), this.password);
+    // Phones capitalise the first letter and pasted values often carry spaces.
+    const result = await this.signIn.signIn(this.username.trim().toLowerCase(), this.password.trim());
     this.busy.set(false);
     if (result === 'invalid') this.error.set('Incorrect username or password.');
     else if (result === 'unavailable') this.error.set('Sign-in is unavailable. Try again shortly.');
