@@ -49,6 +49,8 @@ type Page = 'Overview' | 'Population' | 'Permits' | 'Route scenarios' | 'Data & 
         <div class="top-actions"><ui-badge>Connected</ui-badge><ui-button variant="ghost" size="sm" (click)="signOut()">Sign out</ui-button></div>
       </header>
       <div class="page-content">
+        @for (current of [page()]; track current) {
+        <div class="page-view" animate.enter="ui-slide-up-enter">
         @if (page() === 'Overview') {
           <section class="welcome-row"><div><p class="eyebrow">PLANNING SNAPSHOT</p><h2>See how the city moves.</h2><p class="muted">Population, access and approved roadworks in one planning workspace.</p></div><ui-button variant="primary" (click)="selectPage('Route scenarios')">Plan a route</ui-button></section>
           <div class="metric-grid">
@@ -111,6 +113,8 @@ type Page = 'Overview' | 'Population' | 'Permits' | 'Route scenarios' | 'Data & 
           <mm-route-planner />
         } @else {
           <section class="feature-state"><p class="eyebrow">{{ sectionLabel(page()) }}</p><ui-empty-state [heading]="page()" [description]="descriptionFor(page())"><ui-badge empty-actions>{{ auth.configured ? 'API data unavailable' : 'Identity setup required' }}</ui-badge></ui-empty-state></section>
+        }
+        </div>
         }
       </div>
     </ui-sidebar-layout>

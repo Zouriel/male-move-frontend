@@ -13,7 +13,7 @@ import { LocalSignIn } from './dev-sign-in';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="login-page">
-      <ui-card class="login-card" padding="lg">
+      <ui-card class="login-card" padding="lg" animate.enter="ui-scale-enter">
         <div class="brand login-brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Mobility intelligence</small></span></div>
         <h1>Sign in</h1>
         <p class="muted">Planning workspace for authorized staff.</p>
