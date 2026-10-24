@@ -58,13 +58,57 @@ ui-stat-card { min-height:105px; }
 .login-form ui-button { justify-self:stretch; }
 .login-form ui-form-field, .login-form ui-input, .login-form ui-password-input { display:block; width:100%; min-width:0; }
 
+/* ---- Route check ---------------------------------------------------- */
 .planner { display:block; }
-.planner-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:36px; margin-bottom:12px; }
-.planner-step { margin:0; font-size:16px; font-weight:600; }
-.planner-canvas { height:min(70vh, 640px); margin-top:0; }
-.planner-result { display:flex; align-items:baseline; gap:12px; margin-top:12px; }
-.planner-result b { font-size:28px; }
-.planner-result span { color:var(--mm-muted); font-size:16px; }
+.planner-stage { position:relative; height:min(72vh, 720px); min-height:440px; overflow:hidden; border:1px solid var(--mm-line); border-radius:16px; background:var(--ui-color-surface-subtle); }
+.planner-stage > ui-map { position:absolute; inset:0; display:block; }
+.planner-panel, .planner-result, .planner-error {
+  position:absolute; z-index:1001; border:1px solid var(--mm-line); border-radius:14px;
+  background:color-mix(in srgb, var(--ui-color-surface) 86%, transparent); backdrop-filter:blur(12px);
+  box-shadow:0 12px 32px rgb(0 0 0 / .35);
+}
+.planner-panel { top:12px; right:12px; width:min(380px, calc(100% - 24px)); padding:14px 16px; display:grid; gap:10px; }
+.planner-step { margin:0; font-size:15px; font-weight:600; line-height:1.4; }
+.planner-progress { display:block; }
+.planner-actions { display:flex; flex-wrap:wrap; gap:8px; }
+
+.steps { display:flex; align-items:center; gap:6px; margin:0; padding:0; list-style:none; font-size:11px; color:var(--mm-muted); }
+.step { display:flex; align-items:center; gap:6px; white-space:nowrap; transition:color var(--ui-motion-base) var(--ui-ease-standard); }
+.step-dot { display:grid; width:20px; height:20px; place-items:center; border:1px solid var(--mm-line); border-radius:50%; font-size:10px; font-weight:700;
+  transition:background-color var(--ui-motion-base) var(--ui-ease-standard), border-color var(--ui-motion-base) var(--ui-ease-standard), box-shadow var(--ui-motion-base) var(--ui-ease-standard), color var(--ui-motion-base) var(--ui-ease-standard); }
+.step.current { color:var(--mm-text); }
+.step.current .step-dot { border-color:var(--ui-color-primary); box-shadow:0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 28%, transparent); }
+.step.done .step-dot { border-color:var(--ui-color-primary); background:var(--ui-color-primary); color:var(--ui-color-primary-contrast); }
+.step-line { position:relative; flex:1; min-width:12px; height:2px; overflow:hidden; border-radius:2px; background:var(--mm-line); }
+.step-line::after { content:''; position:absolute; inset:0; background:var(--ui-color-primary); transform:scaleX(0); transform-origin:left; transition:transform var(--ui-motion-slow) var(--ui-ease-standard); }
+.step-line.filled::after { transform:scaleX(1); }
+
+.planner-result { left:12px; bottom:12px; width:min(380px, calc(100% - 24px)); padding:14px 16px; display:grid; gap:6px; }
+.result-time { display:flex; align-items:baseline; gap:8px; }
+.result-time b { font-size:34px; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.result-time span, .result-meta { color:var(--mm-muted); font-size:13px; }
+.result-meta { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+.dot-sep { width:3px; height:3px; border-radius:50%; background:currentColor; }
+.result-tag { justify-self:start; margin-top:4px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;
+  color:var(--ui-color-success); background:color-mix(in srgb, var(--ui-color-success) 16%, transparent); }
+.result-tag.warn { color:var(--ui-color-warning); background:color-mix(in srgb, var(--ui-color-warning) 16%, transparent); }
+.planner-error { left:12px; bottom:12px; max-width:min(420px, calc(100% - 24px)); padding:12px 14px; border-color:var(--ui-color-danger); font-size:13px; }
+
+.vehicle { transition:border-color var(--ui-motion-fast) var(--ui-ease-standard), transform var(--ui-motion-fast) var(--ui-ease-standard); }
+.vehicle:active { transform:scale(.98); }
+@media (hover:hover) and (pointer:fine) { .vehicle:hover { border-color:color-mix(in srgb, var(--ui-color-primary) 60%, var(--mm-line)); } }
+
+.public-main .planner-stage { height:calc(100dvh - 150px); min-height:460px; }
+@media (max-width:650px) {
+  .planner-panel { top:8px; right:8px; left:56px; width:auto; padding:12px; }
+  .planner-result, .planner-error { left:8px; right:8px; bottom:8px; width:auto; max-width:none; }
+  .steps { font-size:10px; }
+  .public-main { padding:12px 8px; }
+  .public-main .planner-stage { height:calc(100dvh - 120px); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .step-line::after, .step, .step-dot, .vehicle { transition-duration:0s; }
+}
 
 .mini-list { display:grid; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
 .mini-list li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--mm-line); font-size:13px; }
@@ -81,3 +125,18 @@ ui-stat-card { min-height:105px; }
 .public-brand { padding:0; }
 .public-main { max-width:1200px; margin:0 auto; padding:20px 16px; }
 .login-back { display:block; margin-top:12px; }
+
+/* ---- Entrances ------------------------------------------------------- */
+.page-view { display:block; }
+.metric-grid > ui-stat-card { animation:ui-slide-up-in var(--ui-motion-slow) var(--ui-ease-decelerate) both; }
+.metric-grid > ui-stat-card:nth-child(2) { animation-delay:40ms; }
+.metric-grid > ui-stat-card:nth-child(3) { animation-delay:80ms; }
+.metric-grid > ui-stat-card:nth-child(4) { animation-delay:120ms; }
+.success-message, .api-error, .reading { animation:ui-slide-up-in var(--ui-motion-base) var(--ui-ease-decelerate) both; }
+.reading { position:relative; overflow:hidden; }
+.reading::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--ui-color-primary) 14%, transparent), transparent); transform:translateX(-100%); animation:mm-sweep 1.4s var(--ui-ease-standard) infinite; }
+@keyframes mm-sweep { to { transform:translateX(100%); } }
+@media (prefers-reduced-motion:reduce) {
+  .metric-grid > ui-stat-card, .success-message, .api-error, .reading { animation-name:ui-fade-in; animation-delay:0s; }
+  .reading::after { animation:none; opacity:0; }
+}
