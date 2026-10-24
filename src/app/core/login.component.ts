@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { UiCard } from '@zouriel/ui/card';
 import { UiButton } from '@zouriel/ui/button';
@@ -26,12 +26,14 @@ import { LocalSignIn } from './dev-sign-in';
           </ui-form-field>
           <ui-button type="submit" [loading]="busy()" [disabled]="!username || !password">Sign in</ui-button>
         </form>
+        <ui-button class="login-back" variant="ghost" size="sm" (click)="cancel.emit()">← Back to route check</ui-button>
       </ui-card>
     </main>
   `,
 })
 export class LoginComponent {
   private readonly signIn = inject(LocalSignIn);
+  readonly cancel = output<void>();
   username = '';
   password = '';
   readonly busy = signal(false);
