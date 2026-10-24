@@ -1,0 +1,94 @@
+const { createReadStream, existsSync, statSync } = require('node:fs');
+const { createServer } = require('node:http');
+const path = require('node:path');
+const { chromium } = require('playwright');
+
+const root = path.resolve('dist/male-move/browser');
+const output = path.resolve('artifacts/ui-screenshots');
+const port = 4300;
+const mimeTypes = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+if (!existsSync(path.join(root, 'index.html'))) throw new Error(`Angular build output not found: ${root}`);
+require('node:fs').mkdirSync(output, { recursive: true });
+
+const server = createServer((request, response) => {
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(request.url, `http://127.0.0.1:${port}`).pathname);
+  } catch {
+    response.writeHead(400).end();
+    return;
+  }
+  const candidate = pathname === '/' ? path.join(root, 'index.html') : path.resolve(root, `.${pathname}`);
+  if (!candidate.startsWith(`${root}${path.sep}`) && candidate !== path.join(root, 'index.html')) {
+    response.writeHead(403).end();
+    return;
+  }
+  const file = existsSync(candidate) && statSync(candidate).isFile() ? candidate : path.join(root, 'index.html');
+  response.writeHead(200, {
+    'Cache-Control': 'no-store',
+    'Content-Type': mimeTypes[path.extname(file)] ?? 'application/octet-stream',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  if (request.method === 'HEAD') response.end();
+  else createReadStream(file).pipe(response);
+});
+
+async function capture() {
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', resolve);
+  });
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  const sections = [
+    ['Overview', '01-overview-desktop.png'],
+    ['Population', '02-population-desktop.png'],
+    ['Mobility map', '03-mobility-map-desktop.png'],
+    ['Permits', '04-permits-desktop.png'],
+    ['Route scenarios', '05-route-scenarios-desktop.png'],
+    ['Data & methodology', '06-data-methodology-desktop.png'],
+  ];
+
+  try {
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('mm-root').waitFor({ state: 'visible' });
+    await page.waitForTimeout(1000);
+    for (const [section, filename] of sections) {
+      if (section !== 'Overview') {
+        await page.locator('ui-side-nav').getByText(section, { exact: true }).click();
+        await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
+      }
+      await page.screenshot({ path: path.join(output, filename), fullPage: true });
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('mm-root').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500);
+    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    await page.screenshot({ path: path.join(output, '07-overview-mobile.png'), fullPage: true });
+    if (mobileOverflow) throw new Error('Overview layout overflows horizontally at 390px.');
+    if (pageErrors.length) throw new Error(`Browser errors: ${pageErrors.join(' | ')}`);
+    console.log(`Captured ${sections.length + 1} UI screenshots in ${output}`);
+  } finally {
+    await browser.close();
+    await new Promise(resolve => server.close(resolve));
+  }
+}
+
+capture().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
