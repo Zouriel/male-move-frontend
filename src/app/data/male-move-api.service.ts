@@ -9,7 +9,7 @@ export interface PermitSummary extends Record<string, unknown> {
   revision: number;
 }
 export interface PopulationRow extends Record<string, unknown> {
-  areaCode: string; areaName: string; areaType: string; year: number; indicator: string;
+  areaCode: string; areaName: string; areaType: string; year: number; indicator: string; category: string | null;
   value: number; unit: string; isProjection: boolean; sourceTitle: string; sourceLocator: string;
 }
 export interface PopulationPage { items: PopulationRow[]; total: number; page: number; pageSize: number; }
@@ -32,10 +32,11 @@ export interface UpdatePermitRequest {
   permitNumber: string; locationDescription: string; workDescription: string; contractor: string | null;
   impactType: number; startsAt: string; endsAt: string; dailyStart: string | null; dailyEnd: string | null; revision: number;
 }
+export type VehicleType = 'motorcycle' | 'car' | 'bicycle' | 'walking';
 export interface RouteRequest {
   origin: { latitude: number; longitude: number };
   destination: { latitude: number; longitude: number };
-  departureTime: string; trafficProfileId?: string;
+  departureTime: string; trafficProfileId?: string; vehicleType?: VehicleType;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -56,7 +57,7 @@ export class MaleMoveApi {
     return this.http.post<ApiEnvelope<PermitSummary>>(`/api/v1/permits/${encodeURIComponent(id)}/submit`, {});
   }
   population(): Observable<ApiEnvelope<PopulationPage>> {
-    return this.http.get<ApiEnvelope<PopulationPage>>('/api/v1/population/series');
+    return this.http.get<ApiEnvelope<PopulationPage>>('/api/v1/population/series?pageSize=200');
   }
   dataSources(): Observable<ApiEnvelope<DataSource[]>> {
     return this.http.get<ApiEnvelope<DataSource[]>>('/api/v1/dataSources');

@@ -56,3 +56,21 @@ ui-stat-card { min-height:105px; }
 .login-form { display:grid; gap:16px; min-width:0; }
 .login-form ui-button { justify-self:stretch; }
 .login-form ui-form-field, .login-form ui-input, .login-form ui-password-input { display:block; width:100%; min-width:0; }
+
+.planner { display:block; }
+.planner-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:36px; margin-bottom:12px; }
+.planner-step { margin:0; font-size:16px; font-weight:600; }
+.planner-canvas { height:min(70vh, 640px); margin-top:0; }
+.planner-result { display:flex; align-items:baseline; gap:12px; margin-top:12px; }
+.planner-result b { font-size:28px; }
+.planner-result span { color:var(--mm-muted); font-size:16px; }
+
+.mini-list { display:grid; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
+.mini-list li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--mm-line); font-size:13px; }
+.mini-list li span { min-width:0; overflow-wrap:anywhere; }
+.planner-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.vehicle-list { display:grid; gap:8px; padding-bottom:8px; }
+.vehicle { display:grid; gap:2px; padding:12px 14px; border:1px solid var(--mm-line); border-radius:10px; background:var(--mm-panel2); color:var(--mm-text); text-align:left; font:inherit; cursor:pointer; }
+.vehicle.active { border-color:var(--mm-teal); }
+.vehicle span { color:var(--mm-muted); font-size:12px; }
+.overview-permits { display:block; margin-top:14px; }

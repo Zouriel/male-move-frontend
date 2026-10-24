@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { UiSidebarLayout } from '@zouriel/ui/layout';
 import { UiMap, type UiMapRoute } from '@zouriel/ui/map';
@@ -12,9 +12,9 @@ import { UiEmptyState } from '@zouriel/ui/feedback';
 import { AuthSession } from './core/auth-session.service';
 import { LoginComponent } from './core/login.component';
 import { LocalSignIn } from './core/dev-sign-in';
+import { RoutePlannerComponent } from './routes/route-planner.component';
 import { MaleMoveApi } from './data/male-move-api.service';
-import type { DataSource, PopulationRow, PermitSummary, RouteAlternative, RouteResult, UpdatePermitRequest } from './data/male-move-api.service';
-import { ROUTE_FORM } from './data/route-form.definition';
+import type { DataSource, PopulationRow, PermitSummary, UpdatePermitRequest } from './data/male-move-api.service';
 import { PERMIT_FORM } from './data/permit-form.definition';
 
 type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scenarios' | 'Data & methodology';
@@ -22,14 +22,14 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
 @Component({
   selector: 'mm-root',
   standalone: true,
-  imports: [LoginComponent, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
+  imports: [LoginComponent, RoutePlannerComponent, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (localSignIn.enabled && !auth.configured) { <mm-login /> } @else {
     <ui-sidebar-layout class="app-shell" [sidebarWidth]="'250px'" [open]="navOpen()" (openChange)="navOpen.set($event)">
       <div sidebar-header class="brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Mobility intelligence</small></span></div>
       <ui-side-nav sidebar [groups]="navGroups" [active]="page()" (navigate)="selectPage($event.value)" label="Planning areas" />
-      <div sidebar-footer class="sidebar-foot"><span class="status-dot"></span><span>Planning workspace<small>Data connection pending</small></span></div>
+      <div sidebar-footer class="sidebar-foot"><span class="status-dot"></span><span>Planning workspace<small>{{ auth.configured ? 'Connected' : 'Sign-in required' }}</small></span></div>
       <header header class="topbar">
         <div><span class="eyebrow">GREATER MALÉ · MALDIVES</span><h1>{{ page() }}</h1></div>
         <div class="top-actions"><ui-badge>{{ auth.configured ? 'Connected' : 'Identity setup required' }}</ui-badge></div>
@@ -38,19 +38,28 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
         @if (page() === 'Overview') {
           <section class="welcome-row"><div><p class="eyebrow">PLANNING SNAPSHOT</p><h2>See how the city moves.</h2><p class="muted">Population, access and approved roadworks in one planning workspace.</p></div><ui-button variant="primary" (click)="selectPage('Route scenarios')">Plan a route</ui-button></section>
           <div class="metric-grid">
-            <ui-stat-card label="Population baseline" value="—" />
-            <ui-stat-card label="Active approved works" value="—" />
-            <ui-stat-card label="Verified facilities" value="—" />
-            <ui-stat-card label="Network freshness" value="—" />
+            <ui-stat-card label="Avas ride requests (Aug–Sep 2026)" [value]="stat(sumOf('avas_ride_requests'))" />
+            <ui-stat-card label="MTCC bus passengers (2025)" [value]="stat(sumOf('bus_passengers_total', 2025))" />
+            <ui-stat-card label="Active approved roadworks" [value]="stat(workCount())" />
+            <ui-stat-card label="Road segments on the map" [value]="stat(roadCount()) + (roadsTruncated() ? '+' : '')" />
           </div>
           <ui-card class="map-panel" padding="md">
-            <div class="panel-heading"><div><p class="eyebrow">GEOGRAPHIC OVERVIEW</p><h3>Greater Malé map</h3></div><ui-badge>No verified layers loaded</ui-badge></div>
-            <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="12" /></div>
-            <p class="map-note">Map centered on Malé for orientation. Road, population, facility and permit layers will appear only after their approved data sources are connected.</p>
+            <div class="panel-heading"><div><p class="eyebrow">GEOGRAPHIC OVERVIEW</p><h3>Greater Malé map</h3></div><ui-badge>{{ roadCount() ? workCount() + ' active roadworks' : 'Loading layers' }}</ui-badge></div>
+            <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="13" [routes]="mapRoutes()" /></div>
+            <p class="map-note">Roads from OpenStreetMap; amber lines are approved roadworks in effect now.</p>
+          </ui-card>
+          <ui-card class="data-panel overview-permits" padding="md"><div class="panel-heading"><div><p class="eyebrow">ROADWORKS & APPROVALS</p><h3>Permits</h3></div><ui-button variant="outline" (click)="selectPage('Permits')">Open permits</ui-button></div>
+            <ui-table [columns]="permitColumns" [data]="permitRows()" emptyText="No permits yet." />
           </ui-card>
           <section class="bottom-grid">
-            <ui-card class="info-card" padding="md"><div class="section-title"><div><p class="eyebrow">SOURCE STATUS</p><h3>Data readiness</h3></div><span class="icon-chip">↗</span></div><ui-empty-state heading="Waiting for source registration" description="Connect approved datasets to show coverage, source dates and validation state." /></ui-card>
-            <ui-card class="info-card" padding="md"><div class="section-title"><div><p class="eyebrow">WORKFLOW</p><h3>Permit review</h3></div><span class="icon-chip">◷</span></div><ui-empty-state heading="Sign in to review permits" description="Permit records and approval actions are available to authorized staff after identity setup." /></ui-card>
+            <ui-card class="info-card" padding="md"><div class="section-title"><div><p class="eyebrow">SOURCE STATUS</p><h3>Data readiness</h3></div><span class="icon-chip">↗</span></div>
+              @if (sourceRows().length) { <ul class="mini-list">@for (source of sourceRows(); track source.id) { <li><span>{{ source.title }}</span><ui-badge>{{ source.approvalState }}</ui-badge></li> }</ul> }
+              @else { <ui-empty-state heading="No sources registered" description="Registered datasets appear here with their approval state." /> }
+            </ui-card>
+            <ui-card class="info-card" padding="md"><div class="section-title"><div><p class="eyebrow">WORKFLOW</p><h3>Permit review</h3></div><span class="icon-chip">◷</span></div>
+              @if (permitRows().length) { <ul class="mini-list">@for (state of permitStates(); track state.label) { <li><span>{{ state.label }}</span><b>{{ state.count }}</b></li> }</ul> }
+              @else { <ui-empty-state heading="No permits yet" description="Registered permits appear here grouped by review state." /> }
+            </ui-card>
           </section>
         } @else if (page() === 'Mobility map') {
           <ui-card class="map-panel full-map" padding="md"><div class="panel-heading"><div><p class="eyebrow">SPATIAL ANALYSIS</p><h3>Mobility access map</h3></div><ui-button variant="outline" (click)="loadMap()" [loading]="mapBusy()">Refresh layers</ui-button></div>
@@ -81,14 +90,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
             @else { <ui-empty-state heading="No sources registered" description="Source metadata includes publisher, year, license, coverage, limitations, approval state and last checked time." /> }
           </ui-card>
         } @else if (page() === 'Route scenarios') {
-          <section class="scenario-layout">
-            <ui-card class="scenario-form" padding="md"><p class="eyebrow">TIME-DEPENDENT PLANNING</p><h2>Compare a route scenario</h2><p class="muted">Enter WGS84 coordinates. All times are evaluated in Maldives local time. Results are estimates based on the loaded road graph and approved restrictions.</p><ui-form-renderer [definition]="routeForm" (submitted)="calculateRoute($event)" [busy]="routeBusy()" /></ui-card>
-            <ui-card class="scenario-result" padding="md"><div class="section-title"><div><p class="eyebrow">RESULT</p><h3>Estimated route</h3></div><ui-badge>{{ routeResult() ? 'Scenario estimate' : 'Waiting for input' }}</ui-badge></div>
-              @if (routeError()) { <div class="api-error" role="alert">{{ routeError() }}</div> }
-              @if (routeResult(); as result) { <p class="map-note">{{ result.trafficLabel }} · Network {{ result.networkVersion }} · Profile {{ result.trafficProfileVersion }}</p><div class="map-frame scenario-map"><ui-map fill [center]="mapCenter" [zoom]="13" [routes]="scenarioRoutes()" /></div><ui-table [columns]="routeColumns" [data]="result.alternatives" emptyText="No route alternatives were returned." /> } @else { <ui-empty-state heading="No scenario calculated" description="Submit origin, destination and departure time to request a route estimate." /> }
-              <p class="map-note">No live traffic data is connected. Route estimates depend on source data freshness, assumed speeds and approved permit schedules.</p>
-            </ui-card>
-          </section>
+          <mm-route-planner />
         } @else {
           <section class="feature-state"><p class="eyebrow">{{ sectionLabel(page()) }}</p><ui-empty-state [heading]="page()" [description]="descriptionFor(page())"><ui-badge empty-actions>{{ auth.configured ? 'API data unavailable' : 'Identity setup required' }}</ui-badge></ui-empty-state></section>
         }
@@ -100,19 +102,37 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
 export class AppComponent {
   readonly auth = inject(AuthSession);
   readonly localSignIn = inject(LocalSignIn);
+  private loaded = false;
+  constructor() {
+    // Fill every view as soon as a token is held, so no page waits on its Refresh button.
+    effect(() => {
+      if (!this.auth.configured || this.loaded) return;
+      this.loaded = true;
+      void this.loadPopulation(); void this.loadPermits(); void this.loadSources(); void this.loadMap();
+    });
+  }
+  readonly roadCount = signal(0);
+  readonly roadsTruncated = signal(false);
+  readonly workCount = signal(0);
+  readonly permitStates = computed(() => {
+    const counts = new Map<string, number>();
+    for (const row of this.permitRows()) { const label = this.approvalLabel(row.approvalState); counts.set(label, (counts.get(label) ?? 0) + 1); }
+    return [...counts].map(([label, count]) => ({ label, count }));
+  });
+  sumOf(indicator: string, year?: number): number | null {
+    const rows = this.populationRows().filter((r) => r.indicator === indicator && (year === undefined || r.year === year));
+    return rows.length ? rows.reduce((total, r) => total + Number(r.value), 0) : null;
+  }
+  stat(value: number | null): string { return value === null ? '—' : new Intl.NumberFormat('en-US').format(value); }
   private readonly api = inject(MaleMoveApi);
   readonly pages: Page[] = ['Overview', 'Population', 'Mobility map', 'Permits', 'Route scenarios', 'Data & methodology'];
   readonly page = signal<Page>('Overview');
   readonly navOpen = signal(false);
-  readonly routeForm = ROUTE_FORM;
   readonly permitForm = PERMIT_FORM;
   readonly permitCreateBusy = signal(false);
   readonly permitCreateError = signal('');
   readonly permitCreated = signal(false);
   readonly pendingPermit = signal<{ id: string; revision: number; phase: 'uploaded' | 'updated' } | null>(null);
-  readonly routeBusy = signal(false);
-  readonly routeError = signal('');
-  readonly routeResult = signal<RouteResult | null>(null);
   readonly populationRows = signal<PopulationRow[]>([]);
   readonly populationBusy = signal(false);
   readonly populationError = signal('');
@@ -123,16 +143,15 @@ export class AppComponent {
   readonly sourcesBusy = signal(false);
   readonly sourcesError = signal('');
   readonly mapRoutes = signal<UiMapRoute[]>([]);
-  readonly scenarioRoutes = signal<UiMapRoute[]>([]);
   readonly mapBusy = signal(false);
   readonly mapError = signal('');
   readonly navGroups: UiSideNavGroup[] = [{ label: 'Planning', items: this.pages.map((label) => ({ label, value: label })) }];
   readonly mapCenter = { lat: 4.1755, lng: 73.5093 };
   readonly populationColumns: UiColumn<PopulationRow>[] = [
+    { key: 'indicator', header: 'Indicator', sortable: true }, { key: 'category', header: 'Category', sortable: true },
+    { key: 'year', header: 'Year', sortable: true, align: 'right' }, { key: 'value', header: 'Value', sortable: true, align: 'right' },
+    { key: 'unit', header: 'Unit' }, { key: 'isProjection', header: 'Series type', format: (value) => value ? 'Projection' : 'Observed' },
     { key: 'areaName', header: 'Area', sortable: true }, { key: 'areaType', header: 'Level', sortable: true },
-    { key: 'year', header: 'Year', sortable: true, align: 'right' }, { key: 'indicator', header: 'Indicator' },
-    { key: 'value', header: 'Value', sortable: true, align: 'right' }, { key: 'unit', header: 'Unit' },
-    { key: 'isProjection', header: 'Series type', format: (value) => value ? 'Projection' : 'Observed' },
     { key: 'sourceTitle', header: 'Source' }, { key: 'sourceLocator', header: 'Source locator' },
   ];
   readonly permitColumns: UiColumn<PermitSummary>[] = [
@@ -146,12 +165,6 @@ export class AppComponent {
     { key: 'sourceYear', header: 'Year', sortable: true }, { key: 'sourceUri', header: 'Source URL' }, { key: 'license', header: 'License' },
     { key: 'approvalState', header: 'Approval', sortable: true }, { key: 'coverageDescription', header: 'Coverage' },
     { key: 'limitations', header: 'Limitations' }, { key: 'lastCheckedAt', header: 'Last checked', sortable: true },
-  ];
-  readonly routeColumns: UiColumn<RouteAlternative>[] = [
-    { key: 'rank', header: 'Option', sortable: true }, { key: 'distanceMeters', header: 'Distance (m)', sortable: true, align: 'right' },
-    { key: 'estimatedDurationSeconds', header: 'Estimated time (s)', sortable: true, align: 'right' },
-    { key: 'estimatedArrival', header: 'Estimated arrival' },
-    { key: 'affectedPermitIds', header: 'Affected permits', format: (value) => Array.isArray(value) ? String(value.length) : '0' },
   ];
   selectPage(value: string): void {
     if (!this.pages.includes(value as Page)) return;
@@ -247,54 +260,14 @@ export class AppComponent {
         points: work.coordinates.map((point) => ({ lat: point.latitude, lng: point.longitude })),
       }));
       this.mapRoutes.set([...roadRoutes, ...workRoutes]);
+      // Roadworks are listed per affected segment; count permits. The roads layer is capped by the API.
+      this.roadCount.set(roadRoutes.length); this.roadsTruncated.set(roads.data?.truncated ?? false);
+      this.workCount.set(new Set((works.data?.features ?? []).map((work) => work.permitId)).size);
     } catch {
       this.mapRoutes.set([]);
       this.mapError.set('Map layers are unavailable. Confirm sign-in, approved source data and API availability.');
     } finally {
       this.mapBusy.set(false);
-    }
-  }
-  async calculateRoute(event: UiFormSubmission): Promise<void> {
-    const data = event.data;
-    const originLatitude = Number(data['origin_latitude']);
-    const originLongitude = Number(data['origin_longitude']);
-    const destinationLatitude = Number(data['destination_latitude']);
-    const destinationLongitude = Number(data['destination_longitude']);
-    const date = String(data['departure_date'] ?? '');
-    const time = String(data['departure_time'] ?? '');
-    if (![originLatitude, originLongitude, destinationLatitude, destinationLongitude].every(Number.isFinite)
-      || !date || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !this.isValidCalendarDate(date)) {
-      this.routeError.set('Enter valid coordinates, a departure date and time.');
-      return;
-    }
-    const inGreaterMale = (latitude: number, longitude: number) =>
-      latitude >= 4.0 && latitude <= 4.5 && longitude >= 73.2 && longitude <= 73.8;
-    if (!inGreaterMale(originLatitude, originLongitude) || !inGreaterMale(destinationLatitude, destinationLongitude)) {
-      this.routeError.set('Both locations must be within the supported Greater Malé area.');
-      return;
-    }
-    this.routeBusy.set(true);
-    this.routeError.set('');
-    this.routeResult.set(null);
-    try {
-      const departureTime = new Date(`${date}T${time}:00+05:00`).toISOString();
-      const response = await firstValueFrom(this.api.calculateRoute({
-        origin: { latitude: originLatitude, longitude: originLongitude },
-        destination: { latitude: destinationLatitude, longitude: destinationLongitude },
-        departureTime,
-      }));
-      if (!response.success || response.data == null) throw new Error(response.message ?? 'Route calculation failed.');
-      this.routeResult.set(response.data);
-      this.scenarioRoutes.set(response.data.alternatives.map((alternative) => ({
-        id: `scenario-${alternative.rank}`,
-        tone: alternative.rank === 1 ? 'primary' : 'muted',
-        label: `Estimated route option ${alternative.rank}`,
-        points: alternative.geometry.map((point) => ({ lat: point.latitude, lng: point.longitude })),
-      })));
-    } catch {
-      this.routeError.set('Route calculation is unavailable. Confirm sign-in and road network configuration, then try again.');
-    } finally {
-      this.routeBusy.set(false);
     }
   }
   sectionLabel(page: Page): string { return ({ Population: 'PEOPLE & PROJECTIONS', Permits: 'ROADWORKS & APPROVALS', 'Route scenarios': 'TIME-DEPENDENT PLANNING', 'Data & methodology': 'PROVENANCE & METHODS' } as Partial<Record<Page, string>>)[page] ?? 'PLANNING'; }
