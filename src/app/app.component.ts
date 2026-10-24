@@ -20,7 +20,7 @@ import { MaleMoveApi } from './data/male-move-api.service';
 import type { DataSource, PopulationRow, PermitSummary, UpdatePermitRequest } from './data/male-move-api.service';
 import { PERMIT_FORM } from './data/permit-form.definition';
 
-type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scenarios' | 'Data & methodology';
+type Page = 'Overview' | 'Population' | 'Permits' | 'Route scenarios' | 'Data & methodology';
 
 @Component({
   selector: 'mm-root',
@@ -34,7 +34,7 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
         <div class="public-page">
           <header class="public-bar">
             <div class="brand public-brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Route check</small></span></div>
-            @if (localSignIn.enabled) { <ui-button variant="outline" size="sm" (click)="showLogin.set(true)">Staff sign in</ui-button> }
+            @if (localSignIn.enabled) { <ui-button variant="outline" size="sm" (click)="showLogin.set(true)">Sign in</ui-button> }
           </header>
           <main class="public-main"><mm-route-planner /></main>
         </div>
@@ -75,10 +75,6 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
               @else { <ui-empty-state heading="No permits yet" description="Registered permits appear here grouped by review state." /> }
             </ui-card>
           </section>
-        } @else if (page() === 'Mobility map') {
-          <ui-card class="map-panel full-map" padding="md"><div class="panel-heading"><div><p class="eyebrow">SPATIAL ANALYSIS</p><h3>Mobility access map</h3></div></div>
-            @if (mapError()) { <div class="api-error" role="alert">{{ mapError() }}</div> }
-            <div class="map-frame"><ui-map fill [center]="mapCenter" [zoom]="13" [markers]="permitDots()" markerLabels="none" /></div><p class="map-note">Amber dots are approved roadworks in effect now; route checks go around them. Grey dots are awaiting review.</p></ui-card>
         } @else if (page() === 'Population') {
           <ui-card class="data-panel" padding="md"><div class="panel-heading"><div><p class="eyebrow">OFFICIAL BASELINES & PUBLISHED PROJECTIONS</p><h3>Population series</h3></div></div>
             @if (populationError()) { <div class="api-error" role="alert">{{ populationError() }}</div> }
@@ -162,7 +158,7 @@ export class AppComponent {
   }
   stat(value: number | null): string { return value === null ? '—' : new Intl.NumberFormat('en-US').format(value); }
   private readonly api = inject(MaleMoveApi);
-  readonly pages: Page[] = ['Overview', 'Population', 'Mobility map', 'Permits', 'Route scenarios', 'Data & methodology'];
+  readonly pages: Page[] = ['Overview', 'Population', 'Permits', 'Route scenarios', 'Data & methodology'];
   readonly page = signal<Page>('Overview');
   readonly navOpen = signal(false);
   readonly permitForm = PERMIT_FORM;
