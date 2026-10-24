@@ -82,7 +82,13 @@ async function capture() {
     for (const [section, filename] of sections) {
       currentScreen = `${section} mobile`;
       if (section !== 'Overview') {
-        await page.locator('ui-side-nav').getByText(section, { exact: true }).click();
+        const navigationItem = page.locator('ui-side-nav').getByText(section, { exact: true });
+        if (!await navigationItem.isVisible()) {
+          // The shared layout collapses the sidebar behind its menu control on phone widths.
+          await page.locator('ui-sidebar-layout button').first().click();
+          await navigationItem.waitFor({ state: 'visible' });
+        }
+        await navigationItem.click();
         await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
       }
       const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
