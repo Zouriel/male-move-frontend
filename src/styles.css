@@ -76,3 +76,8 @@ ui-stat-card { min-height:105px; }
 .vehicle span { color:var(--mm-muted); font-size:12px; }
 .overview-permits { display:block; margin-top:14px; }
 .reading { margin:16px 0; padding:14px; border:1px dashed var(--mm-line); border-radius:10px; color:var(--mm-muted); }
+.public-page { min-height:100vh; background:var(--mm-bg); }
+.public-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 24px; border-bottom:1px solid var(--mm-line); background:var(--ui-color-surface); }
+.public-brand { padding:0; }
+.public-main { max-width:1200px; margin:0 auto; padding:20px 16px; }
+.login-back { display:block; margin-top:12px; }

@@ -28,14 +28,25 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
   imports: [LoginComponent, RoutePlannerComponent, UiFileUpload, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (localSignIn.enabled && !auth.configured) { <mm-login /> } @else {
+    @if (!auth.configured) {
+      @if (showLogin()) { <mm-login (cancel)="showLogin.set(false)" /> }
+      @else {
+        <div class="public-page">
+          <header class="public-bar">
+            <div class="brand public-brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Route check</small></span></div>
+            @if (localSignIn.enabled) { <ui-button variant="outline" size="sm" (click)="showLogin.set(true)">Staff sign in</ui-button> }
+          </header>
+          <main class="public-main"><mm-route-planner /></main>
+        </div>
+      }
+    } @else {
     <ui-sidebar-layout class="app-shell" [sidebarWidth]="'250px'" [open]="navOpen()" (openChange)="navOpen.set($event)">
       <div sidebar-header class="brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Mobility intelligence</small></span></div>
       <ui-side-nav sidebar [groups]="navGroups" [active]="page()" (navigate)="selectPage($event.value)" label="Planning areas" />
       <div sidebar-footer class="sidebar-foot"><span class="status-dot"></span><span>Planning workspace<small>{{ auth.configured ? 'Connected' : 'Sign-in required' }}</small></span></div>
       <header header class="topbar">
         <div><span class="eyebrow">GREATER MALÉ · MALDIVES</span><h1>{{ page() }}</h1></div>
-        <div class="top-actions"><ui-badge>{{ auth.configured ? 'Connected' : 'Identity setup required' }}</ui-badge></div>
+        <div class="top-actions"><ui-badge>Connected</ui-badge><ui-button variant="ghost" size="sm" (click)="signOut()">Sign out</ui-button></div>
       </header>
       <div class="page-content">
         @if (page() === 'Overview') {
@@ -113,6 +124,13 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
 export class AppComponent {
   readonly auth = inject(AuthSession);
   readonly localSignIn = inject(LocalSignIn);
+  readonly showLogin = signal(false);
+  signOut(): void {
+    this.auth.clear();
+    this.loaded = false;
+    this.showLogin.set(false);
+    this.page.set('Overview');
+  }
   private loaded = false;
   constructor() {
     // Fill every view as soon as a token is held.
