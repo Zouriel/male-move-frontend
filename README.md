@@ -15,7 +15,7 @@ The development server proxies `/api` to `http://localhost:5080`. Set the API's 
 
 `npm start` and `npm run build:staging` build with `src/environments/environment.local.ts`, which signs in through the API's local token issuer (`POST /api/v1/dev/token`, available only when the API runs in Development or Staging with `Authentication__DevelopmentSigningKey`; see the backend README). `npm run build` (production) never calls it.
 
-Staging (https://staging-4.zouriel.com) is deployed from the backend repo with `deploy/staging/ship.sh`, which builds this app with `build:staging` and packages `dist/` with `Dockerfile.prebuilt`. `Dockerfile` builds from source and takes the package token as a BuildKit secret.
+Staging (https://staging-4.zouriel.com) is built on the server by `deploy male-move` (see the backend README): `Dockerfile` builds with `CONFIGURATION=staging` and takes the package token as a BuildKit secret, so it never lands in an image layer.
 
 ## Current application state
 

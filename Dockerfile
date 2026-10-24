@@ -2,8 +2,8 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 ARG CONFIGURATION=production
-COPY package.json package-lock.json* .npmrc ./
-RUN --mount=type=secret,id=npm_token NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token) npm install --no-audit --no-fund
+COPY package.json package-lock.json .npmrc ./
+RUN --mount=type=secret,id=npm_token NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token) npm ci --no-audit --no-fund
 COPY angular.json tsconfig.json tsconfig.app.json ./
 COPY src ./src
 RUN npx ng build --configuration "$CONFIGURATION"
