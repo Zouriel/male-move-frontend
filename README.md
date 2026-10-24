@@ -13,6 +13,10 @@ npm start
 
 The development server proxies `/api` to `http://localhost:5080`. Set the API's development CORS origin to `http://localhost:4200` when calling it directly.
 
+`npm start` and `npm run build:staging` build with `src/environments/environment.local.ts`, which signs in through the API's local token issuer (`POST /api/v1/dev/token`, available only when the API runs in Development or Staging with `Authentication__DevelopmentSigningKey`; see the backend README). `npm run build` (production) never calls it.
+
+Staging (https://staging-4.zouriel.com) is built on the server by `deploy male-move` (see the backend README): `Dockerfile` builds with `CONFIGURATION=staging` and takes the package token as a BuildKit secret, so it never lands in an image layer.
+
 ## Current application state
 
 - The responsive app shell and Greater Malé map frame use the shared UI package.
@@ -22,7 +26,7 @@ The development server proxies `/api` to `http://localhost:5080`. Set the API's 
 - The UI library includes a form builder and workflow builder/runtime. Use `@zouriel/ui/form-builder` and `@zouriel/ui/workflow` for those product surfaces when persisted form definitions and workflow engine are connected; do not build equivalent custom designers.
 - The workflow builder/panel are not wired yet: their .NET engine is in `Zouriel/zouriel-workflows` and is not published to NuGet. Connect its pinned source and lifecycle storage before handling operational permit approvals; the current API has an interim permit state service and a non-tamper-evident event table.
 - Road-segment assignment/confirmation is not implemented in the current API or UI. That capability is required before an approver can safely approve a route-affecting permit.
-- The repository does not yet contain `package-lock.json` because the private package registry token is unavailable in this environment. Generate and commit the lockfile after configuring read-only package access; until then CI uses `npm install` without dependency caching.
+- `package-lock.json` is committed; CI can move to `npm ci`.
 
 Read [SECURITY.md](SECURITY.md) for deployment headers, CSP, identity and map tile requirements.
 
