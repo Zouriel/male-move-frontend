@@ -97,6 +97,7 @@ async function capture() {
     if (requestCount !== 1 || routePayload?.departureTime !== '2026-10-25T07:00:00.000Z') {
       pageErrors.push({ screen: currentScreen, stack: `Route request count/timezone mismatch: ${requestCount}, ${routePayload?.departureTime}` });
     }
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(output, '07-route-scenario-result-mobile.png'), fullPage: true });
     await page.unroute('**/api/v1/routes');
   }
