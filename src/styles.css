@@ -14,7 +14,7 @@ ui-sidebar-layout.app-shell { min-height:100vh; --ui-color-surface:var(--mm-bg);
 .eyebrow { color:var(--ui-color-primary); font-size:9px; font-weight:750; letter-spacing:.15em; }
 .sidebar-foot { display:flex; gap:10px; align-items:center; margin-top:auto; padding:15px 10px 0; border-top:1px solid var(--mm-line); font-size:11px; }
 .status-dot { width:7px;height:7px;border-radius:100%; background:var(--ui-color-warning); }
-.topbar { display:flex; height:84px; align-items:center; justify-content:space-between; border-bottom:1px solid var(--mm-line); padding:0 34px; background:var(--ui-color-surface); }
+.topbar { flex:1 1 auto; width:100%; min-width:0; box-sizing:border-box; display:flex; height:84px; align-items:center; justify-content:space-between; border-bottom:1px solid var(--mm-line); padding:0 34px; background:var(--ui-color-surface); }
 .topbar h1 { margin:4px 0 0; font-size:16px; font-weight:600; }
 .top-actions { display:flex; gap:14px; align-items:center; }
 .page-content { max-width:1540px; margin:auto; padding:28px 34px 44px; }
@@ -140,3 +140,5 @@ ui-stat-card { min-height:105px; }
   .metric-grid > ui-stat-card, .success-message, .api-error, .reading { animation-name:ui-fade-in; animation-delay:0s; }
   .reading::after { animation:none; opacity:0; }
 }
+.topbar h1 { animation:ui-fade-in var(--ui-motion-base) var(--ui-ease-decelerate); }
+.result-time b, .metric-grid { font-variant-numeric:tabular-nums; }

@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { UiSidebarLayout } from '@zouriel/ui/layout';
 import { UiMap, type UiMapMarker } from '@zouriel/ui/map';
 import { permitMarkers } from './data/permit-markers';
+import { countUp } from './core/motion';
 import { UiCard, UiStatCard } from '@zouriel/ui/card';
 import { UiButton } from '@zouriel/ui/button';
 import { UiBadge } from '@zouriel/ui/badge';
@@ -45,7 +46,7 @@ type Page = 'Overview' | 'Population' | 'Permits' | 'Route scenarios' | 'Data & 
       <ui-side-nav sidebar [groups]="navGroups" [active]="page()" (navigate)="selectPage($event.value)" label="Planning areas" />
       <div sidebar-footer class="sidebar-foot"><span class="status-dot"></span><span>Planning workspace<small>{{ auth.configured ? 'Connected' : 'Sign-in required' }}</small></span></div>
       <header header class="topbar">
-        <div><span class="eyebrow">GREATER MALÉ · MALDIVES</span><h1>{{ page() }}</h1></div>
+        <div><span class="eyebrow">GREATER MALÉ · MALDIVES</span>@for (title of [page()]; track title) { <h1>{{ title }}</h1> }</div>
         <div class="top-actions"><ui-badge>Connected</ui-badge><ui-button variant="ghost" size="sm" (click)="signOut()">Sign out</ui-button></div>
       </header>
       <div class="page-content">
@@ -54,10 +55,10 @@ type Page = 'Overview' | 'Population' | 'Permits' | 'Route scenarios' | 'Data & 
         @if (page() === 'Overview') {
           <section class="welcome-row"><div><p class="eyebrow">PLANNING SNAPSHOT</p><h2>See how the city moves.</h2><p class="muted">Population, access and approved roadworks in one planning workspace.</p></div><ui-button variant="primary" (click)="selectPage('Route scenarios')">Plan a route</ui-button></section>
           <div class="metric-grid">
-            <ui-stat-card label="Avas ride requests (Aug–Sep 2026)" [value]="stat(sumOf('avas_ride_requests'))" />
-            <ui-stat-card label="MTCC bus passengers (2025)" [value]="stat(sumOf('bus_passengers_total', 2025))" />
-            <ui-stat-card label="Active approved roadworks" [value]="stat(workCount())" />
-            <ui-stat-card label="Road segments on the map" [value]="stat(roadCount()) + (roadsTruncated() ? '+' : '')" />
+            <ui-stat-card label="Avas ride requests (Aug–Sep 2026)" [value]="stat(avasRides())" />
+            <ui-stat-card label="MTCC bus passengers (2025)" [value]="stat(busRiders())" />
+            <ui-stat-card label="Active approved roadworks" [value]="stat(worksShown())" />
+            <ui-stat-card label="Road segments on the map" [value]="stat(roadsShown()) + (roadsTruncated() ? '+' : '')" />
           </div>
           <ui-card class="map-panel" padding="md">
             <div class="panel-heading"><div><p class="eyebrow">GEOGRAPHIC OVERVIEW</p><h3>Greater Malé map</h3></div><ui-badge>{{ roadCount() ? workCount() + ' active roadworks' : 'Loading layers' }}</ui-badge></div>
@@ -160,7 +161,12 @@ export class AppComponent {
     const rows = this.populationRows().filter((r) => r.indicator === indicator && (year === undefined || r.year === year));
     return rows.length ? rows.reduce((total, r) => total + Number(r.value), 0) : null;
   }
-  stat(value: number | null): string { return value === null ? '—' : new Intl.NumberFormat('en-US').format(value); }
+  stat(value: number | null): string { return value === null ? '—' : new Intl.NumberFormat('en-US').format(Math.round(value)); }
+  // Stat cards count up to their values.
+  readonly avasRides = countUp(() => this.sumOf('avas_ride_requests'), 900);
+  readonly busRiders = countUp(() => this.sumOf('bus_passengers_total', 2025), 900);
+  readonly worksShown = countUp(() => (this.roadCount() ? this.workCount() : null), 700);
+  readonly roadsShown = countUp(() => (this.roadCount() || null), 900);
   private readonly api = inject(MaleMoveApi);
   readonly pages: Page[] = ['Overview', 'Population', 'Permits', 'Route scenarios', 'Data & methodology'];
   readonly page = signal<Page>('Overview');
