@@ -55,3 +55,4 @@ ui-stat-card { min-height:105px; }
 .login-card .muted { margin:0 0 24px; color:var(--mm-muted); }
 .login-form { display:grid; gap:16px; min-width:0; }
 .login-form ui-button { justify-self:stretch; }
+.login-form ui-form-field, .login-form ui-input, .login-form ui-password-input { display:block; width:100%; min-width:0; }
