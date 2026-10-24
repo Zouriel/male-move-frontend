@@ -5,7 +5,7 @@
 :root { color-scheme: dark; --mm-bg:#071b22; --mm-panel:#0c252d; --mm-panel2:#102e37; --mm-line:#1d3d45; --mm-text:#e6f0ed; --mm-muted:#90aaa7; --mm-teal:#5de0c0; --mm-lime:#d6f27c; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
 * { box-sizing:border-box; }
 html,body,mm-root { display:block; width:100%; min-height:100%; margin:0; background:var(--mm-bg); color:var(--mm-text); }
-body { min-width:360px; }
+body { min-width:320px; }
 ui-sidebar-layout.app-shell { min-height:100vh; --ui-color-surface:var(--mm-bg); }
 .brand { display:flex; align-items:center; gap:11px; padding:2px 9px 32px; letter-spacing:.08em; font-size:12px; }
 .brand-mark { display:grid; width:35px;height:35px; place-items:center; border-radius:11px; color:#06251f; background:var(--mm-teal); font-weight:900; font-size:18px; }

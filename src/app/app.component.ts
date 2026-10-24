@@ -103,7 +103,7 @@ export class AppComponent {
   readonly permitCreateBusy = signal(false);
   readonly permitCreateError = signal('');
   readonly permitCreated = signal(false);
-  readonly pendingPermit = signal<{ id: string; revision: number } | null>(null);
+  readonly pendingPermit = signal<{ id: string; revision: number; phase: 'uploaded' | 'updated' } | null>(null);
   readonly routeBusy = signal(false);
   readonly routeError = signal('');
   readonly routeResult = signal<RouteResult | null>(null);
@@ -169,34 +169,41 @@ export class AppComponent {
         if (!file) throw new Error('Choose the original permit document.');
         const uploaded = await firstValueFrom(this.api.uploadPermit(file));
         if (!uploaded.success || !uploaded.data?.id) throw new Error('Upload was not accepted.');
-        pending = { id: uploaded.data.id, revision: uploaded.data.revision };
+        pending = { id: uploaded.data.id, revision: uploaded.data.revision, phase: 'uploaded' };
         this.pendingPermit.set(pending);
       }
       const localInstant = (dateKey: string, timeKey: string): string => {
         const date = String(data[dateKey] ?? ''), time = String(data[timeKey] ?? '');
-        const normalizedTime = /^\d{2}:\d{2}$/.test(time) ? `${time}:00` : time;
-        const parsed = new Date(`${date}T${normalizedTime}+05:00`);
-        if (!date || !time || Number.isNaN(parsed.valueOf())) throw new Error('Enter valid permit dates and times.');
-        return parsed.toISOString();
+        if (!this.isValidLocalDateTime(date, time)) throw new Error('Enter valid permit dates and times.');
+        return new Date(`${date}T${time}:00+05:00`).toISOString();
       };
       const dailyTime = (key: string): string | null => {
         const time = String(data[key] ?? '');
-        return time ? (/^\d{2}:\d{2}$/.test(time) ? `${time}:00` : time) : null;
+        if (!time) return null;
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error('Enter valid recurring restriction times.');
+        return `${time}:00`;
       };
-      const update: UpdatePermitRequest = {
-        permitNumber: String(data['permit_number'] ?? '').trim(),
-        locationDescription: String(data['location_description'] ?? '').trim(),
-        workDescription: String(data['work_description'] ?? '').trim(),
-        contractor: String(data['contractor'] ?? '').trim() || null,
-        impactType: Number(data['impact_type']),
-        startsAt: localInstant('starts_date', 'starts_time'),
-        endsAt: localInstant('ends_date', 'ends_time'),
-        dailyStart: dailyTime('daily_start'),
-        dailyEnd: dailyTime('daily_end'),
-        revision: pending.revision,
-      };
-      const updated = await firstValueFrom(this.api.updatePermit(pending.id, update));
-      if (!updated.success) throw new Error('Permit details were not saved.');
+      if (pending.phase === 'uploaded') {
+        const startsAt = localInstant('starts_date', 'starts_time');
+        const endsAt = localInstant('ends_date', 'ends_time');
+        if (new Date(endsAt) <= new Date(startsAt)) throw new Error('The end time must be after the start time.');
+        const update: UpdatePermitRequest = {
+          permitNumber: String(data['permit_number'] ?? '').trim(),
+          locationDescription: String(data['location_description'] ?? '').trim(),
+          workDescription: String(data['work_description'] ?? '').trim(),
+          contractor: String(data['contractor'] ?? '').trim() || null,
+          impactType: Number(data['impact_type']),
+          startsAt,
+          endsAt,
+          dailyStart: dailyTime('daily_start'),
+          dailyEnd: dailyTime('daily_end'),
+          revision: pending.revision,
+        };
+        const updated = await firstValueFrom(this.api.updatePermit(pending.id, update));
+        if (!updated.success || !updated.data) throw new Error('Permit details were not saved.');
+        pending = { id: pending.id, revision: updated.data.revision, phase: 'updated' };
+        this.pendingPermit.set(pending);
+      }
       const submitted = await firstValueFrom(this.api.submitPermit(pending.id));
       if (!submitted.success) throw new Error('Permit was saved but could not be submitted.');
       this.pendingPermit.set(null);
@@ -243,7 +250,8 @@ export class AppComponent {
     const destinationLongitude = Number(data['destination_longitude']);
     const date = String(data['departure_date'] ?? '');
     const time = String(data['departure_time'] ?? '');
-    if (![originLatitude, originLongitude, destinationLatitude, destinationLongitude].every(Number.isFinite) || !date || !time) {
+    if (![originLatitude, originLongitude, destinationLatitude, destinationLongitude].every(Number.isFinite)
+      || !date || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !this.isValidCalendarDate(date)) {
       this.routeError.set('Enter valid coordinates, a departure date and time.');
       return;
     }
@@ -272,5 +280,14 @@ export class AppComponent {
     }
   }
   sectionLabel(page: Page): string { return ({ Population: 'PEOPLE & PROJECTIONS', Permits: 'ROADWORKS & APPROVALS', 'Route scenarios': 'TIME-DEPENDENT PLANNING', 'Data & methodology': 'PROVENANCE & METHODS' } as Partial<Record<Page, string>>)[page] ?? 'PLANNING'; }
+  private isValidLocalDateTime(date: string, time: string): boolean {
+    return this.isValidCalendarDate(date) && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
+  }
+  private isValidCalendarDate(value: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  }
   descriptionFor(page: Page): string { return ({ Population: 'Compare official population baselines with published projections at the geographic levels supported by their source.', Permits: 'Review source documents, verify extracted details and road segments, and manage approvals with a complete audit trail.', 'Route scenarios': 'Compare estimated routes for a selected departure time and approved roadwork scenario. Estimates are not live traffic.', 'Data & methodology': 'Inspect source provenance, validation status, model assumptions and version history.' } as Partial<Record<Page, string>>)[page] ?? ''; }
 }
