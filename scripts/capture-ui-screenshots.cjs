@@ -61,6 +61,12 @@ async function capture() {
     ['Route scenarios', '05-route-scenarios-desktop.png'],
     ['Data & methodology', '06-data-methodology-desktop.png'],
   ];
+  async function chooseDate(label, iso) {
+    await page.getByLabel(label).click();
+    const day = page.locator(`[role="dialog"] button[data-iso="${iso}"]`);
+    await day.waitFor({ state: 'visible' });
+    await day.click();
+  }
   async function auditRouteForm() {
     currentScreen = 'Route scenario form workflow on phone';
     let requestCount = 0;
@@ -80,7 +86,7 @@ async function capture() {
     await page.getByRole('spinbutton', { name: 'Origin longitude' }).fill('73.5093');
     await page.getByRole('spinbutton', { name: 'Destination latitude' }).fill('4.173');
     await page.getByRole('spinbutton', { name: 'Destination longitude' }).fill('73.512');
-    await page.getByLabel('Departure date').fill('2026-10-25');
+    await chooseDate('Departure date', '2026-10-25');
     await page.getByLabel('Departure time (Maldives time)').fill('12:00');
     await page.getByRole('button', { name: 'Calculate route' }).click();
     await page.getByText('Origin latitude must be 90 or less.').first().waitFor({ state: 'visible' });
@@ -97,12 +103,6 @@ async function capture() {
 
   async function auditPermitForm() {
     currentScreen = 'Permit form validation on phone';
-    async function chooseDate(label, iso) {
-      await page.getByLabel(label).click();
-      const day = page.locator(`[role="dialog"] button[data-iso="${iso}"]`);
-      await day.waitFor({ state: 'visible' });
-      await day.click();
-    }
     let apiRequests = 0;
     const calls = { upload: 0, update: 0, submit: 0, list: 0 };
     let updatePayload = null;
