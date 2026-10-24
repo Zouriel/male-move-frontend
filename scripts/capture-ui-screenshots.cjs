@@ -76,16 +76,16 @@ async function capture() {
     await page.getByRole('button', { name: 'Calculate route' }).click();
     await page.locator('ui-form-renderer [role="alert"]').waitFor({ state: 'visible' });
     if (requestCount !== 0) pageErrors.push({ screen: currentScreen, stack: 'An empty route form sent an API request.' });
-    await page.getByLabel('Origin latitude').fill('100');
-    await page.getByLabel('Origin longitude').fill('73.5093');
-    await page.getByLabel('Destination latitude').fill('4.173');
-    await page.getByLabel('Destination longitude').fill('73.512');
+    await page.getByRole('spinbutton', { name: 'Origin latitude' }).fill('100');
+    await page.getByRole('spinbutton', { name: 'Origin longitude' }).fill('73.5093');
+    await page.getByRole('spinbutton', { name: 'Destination latitude' }).fill('4.173');
+    await page.getByRole('spinbutton', { name: 'Destination longitude' }).fill('73.512');
     await page.getByLabel('Departure date').fill('2026-10-25');
     await page.getByLabel('Departure time (Maldives time)').fill('12:00');
     await page.getByRole('button', { name: 'Calculate route' }).click();
-    await page.getByText('Origin latitude must be 90 or less.').waitFor({ state: 'visible' });
+    await page.getByText('Origin latitude must be 90 or less.').first().waitFor({ state: 'visible' });
     if (requestCount !== 0) pageErrors.push({ screen: currentScreen, stack: 'An out-of-range route coordinate sent an API request.' });
-    await page.getByLabel('Origin latitude').fill('4.1755');
+    await page.getByRole('spinbutton', { name: 'Origin latitude' }).fill('4.1755');
     await page.getByRole('button', { name: 'Calculate route' }).click();
     await page.getByText('Scenario estimate', { exact: true }).waitFor({ state: 'visible' });
     if (requestCount !== 1 || routePayload?.departureTime !== '2026-10-25T07:00:00.000Z') {
