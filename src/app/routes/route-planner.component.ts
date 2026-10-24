@@ -6,6 +6,7 @@ import { UiButton } from '@zouriel/ui/button';
 import { UiMap, type UiLatLng, type UiMapMarker, type UiMapRoute } from '@zouriel/ui/map';
 import { UiDrawer } from '@zouriel/ui/dialog';
 import { MaleMoveApi, type RouteAlternative, type VehicleType } from '../data/male-move-api.service';
+import { permitMarkers } from '../data/permit-markers';
 
 const VEHICLES: { value: VehicleType; label: string; hint: string }[] = [
   { value: 'motorcycle', label: 'Motorcycle', hint: 'Default · filters through traffic' },
@@ -30,7 +31,7 @@ const VEHICLES: { value: VehicleType; label: string; hint: string }[] = [
         </div>
       </div>
       <div class="map-frame planner-canvas">
-        <ui-map #map fill [center]="center" [zoom]="13" [markers]="markers()" [routes]="lines()" (mapTap)="tapped($event)" ariaLabel="Route map: tap your start, then your destination" />
+        <ui-map #map fill [center]="center" [zoom]="13" [markers]="markers()" markerLabels="selected" [routes]="lines()" (mapTap)="tapped($event)" ariaLabel="Route map: tap your start, then your destination" />
       </div>
       @if (route(); as r) {
         <div class="planner-result">
@@ -72,9 +73,17 @@ export class RoutePlannerComponent {
     if (this.busy()) return 'Finding the route…';
     return this.route() ? 'Tap the map again to plan a new trip.' : 'Tap the map to try another trip.';
   });
+  /** Active roadworks, shown so people can see what the route goes around. */
+  private readonly roadworks = signal<UiMapMarker[]>([]);
+  constructor() {
+    firstValueFrom(this.api.roadworks({ west: 73.2, south: 4.0, east: 73.8, north: 4.5 }))
+      .then((r) => this.roadworks.set(permitMarkers(r.data?.features ?? [])))
+      .catch(() => this.roadworks.set([]));
+  }
   readonly markers = computed<UiMapMarker[]>(() => {
     const from = this.from(), to = this.to();
     return [
+      ...this.roadworks(),
       ...(from ? [{ id: 'from', ...from, tone: 'success' as const, label: 'Start' }] : []),
       ...(to ? [{ id: 'to', ...to, tone: 'danger' as const, label: 'Destination' }] : []),
     ];
