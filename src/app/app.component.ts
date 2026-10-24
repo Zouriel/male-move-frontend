@@ -10,6 +10,8 @@ import { UiFormRenderer, type UiFormSubmission } from '@zouriel/ui/form-builder'
 import { UiTable, type UiColumn } from '@zouriel/ui/table';
 import { UiEmptyState } from '@zouriel/ui/feedback';
 import { AuthSession } from './core/auth-session.service';
+import { LoginComponent } from './core/login.component';
+import { LocalSignIn } from './core/dev-sign-in';
 import { MaleMoveApi } from './data/male-move-api.service';
 import type { DataSource, PopulationRow, PermitSummary, RouteAlternative, RouteResult, UpdatePermitRequest } from './data/male-move-api.service';
 import { ROUTE_FORM } from './data/route-form.definition';
@@ -20,9 +22,10 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
 @Component({
   selector: 'mm-root',
   standalone: true,
-  imports: [UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
+  imports: [LoginComponent, UiSidebarLayout, UiMap, UiCard, UiStatCard, UiButton, UiBadge, UiSideNav, UiFormRenderer, UiTable, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (localSignIn.enabled && !auth.configured) { <mm-login /> } @else {
     <ui-sidebar-layout class="app-shell" [sidebarWidth]="'250px'" [open]="navOpen()" (openChange)="navOpen.set($event)">
       <div sidebar-header class="brand"><span class="brand-mark">M</span><span><b>MALÉ MOVE</b><small>Mobility intelligence</small></span></div>
       <ui-side-nav sidebar [groups]="navGroups" [active]="page()" (navigate)="selectPage($event.value)" label="Planning areas" />
@@ -91,10 +94,12 @@ type Page = 'Overview' | 'Population' | 'Mobility map' | 'Permits' | 'Route scen
         }
       </div>
     </ui-sidebar-layout>
+    }
   `,
 })
 export class AppComponent {
   readonly auth = inject(AuthSession);
+  readonly localSignIn = inject(LocalSignIn);
   private readonly api = inject(MaleMoveApi);
   readonly pages: Page[] = ['Overview', 'Population', 'Mobility map', 'Permits', 'Route scenarios', 'Data & methodology'];
   readonly page = signal<Page>('Overview');

@@ -47,3 +47,11 @@ ui-stat-card { min-height:105px; }
 .api-error { margin:16px 0; padding:11px 13px; border:1px solid #7b433e; border-radius:8px; color:#ffd1c8; background:#3e2324; font-size:12px; }
 @media(max-width:1000px) { .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .page-content { padding:24px 20px; } .topbar { padding:0 20px; } }
 @media(max-width:650px) { .topbar { height:72px; } .top-actions ui-badge { display:none; } .welcome-row { align-items:flex-start; flex-direction:column; } .bottom-grid,.scenario-layout { grid-template-columns:1fr; } .scenario-result { position:static; } .metric-grid { gap:8px; } .map-frame { height:280px; } .page-content { padding:20px 14px 32px; } }
+
+.login-page { display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px 16px; background:var(--mm-bg); }
+.login-card { display:block; width:min(400px, 100%); min-width:0; }
+.login-brand { padding:0 0 24px; }
+.login-card h1 { margin:0 0 8px; font-size:24px; }
+.login-card .muted { margin:0 0 24px; color:var(--mm-muted); }
+.login-form { display:grid; gap:16px; min-width:0; }
+.login-form ui-button { justify-self:stretch; }
