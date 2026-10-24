@@ -35,8 +35,20 @@ export const PERMIT_FORM: UiFormDefinition = {
       },
       { kind: 'field', id: 'starts-date', type: 'date', key: 'starts_date', label: 'Start date', required: true, layout: { width: 'half' } },
       { kind: 'field', id: 'starts-time', type: 'time', key: 'starts_time', label: 'Start time (Maldives time)', required: true, layout: { width: 'half' } },
-      { kind: 'field', id: 'ends-date', type: 'date', key: 'ends_date', label: 'End date', required: true, layout: { width: 'half' } },
-      { kind: 'field', id: 'ends-time', type: 'time', key: 'ends_time', label: 'End time (Maldives time)', required: true, layout: { width: 'half' } },
+      {
+        kind: 'field', id: 'ends-date', type: 'date', key: 'ends_date', label: 'End date', required: true,
+        validators: [{ id: 'permit-end-date-after-start', type: 'compareField', params: { comparison: 'gte', field: 'starts-date' }, message: 'End date must be on or after the start date.' }],
+        layout: { width: 'half' },
+      },
+      {
+        kind: 'field', id: 'ends-time', type: 'time', key: 'ends_time', label: 'End time (Maldives time)', required: true,
+        validators: [{
+          id: 'permit-end-time-after-start', type: 'compareField', params: { comparison: 'gt', field: 'starts-time' },
+          when: { ref: 'starts-date', op: 'eq', value: { ref: 'ends-date' } },
+          message: 'When the permit starts and ends on one day, end time must be later than start time.',
+        }],
+        layout: { width: 'half' },
+      },
       { kind: 'field', id: 'daily-start', type: 'time', key: 'daily_start', label: 'Recurring daily restriction starts (optional)', layout: { width: 'half' } },
       { kind: 'field', id: 'daily-end', type: 'time', key: 'daily_end', label: 'Recurring daily restriction ends (optional)', layout: { width: 'half' } },
     ],
