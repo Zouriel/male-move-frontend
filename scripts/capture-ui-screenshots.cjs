@@ -89,7 +89,7 @@ async function capture() {
     await chooseDate('Departure date', '2026-10-25');
     await page.getByLabel('Departure time (Maldives time)').fill('12:00');
     await page.getByRole('button', { name: 'Calculate route' }).click();
-    await page.getByText('Origin latitude must be 90 or less.').first().waitFor({ state: 'visible' });
+    await page.getByText('Origin latitude must be 4.5 or less.').first().waitFor({ state: 'visible' });
     if (requestCount !== 0) pageErrors.push({ screen: currentScreen, stack: 'An out-of-range route coordinate sent an API request.' });
     await page.getByRole('spinbutton', { name: 'Origin latitude' }).fill('4.1755');
     await page.getByRole('button', { name: 'Calculate route' }).click();

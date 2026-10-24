@@ -261,6 +261,12 @@ export class AppComponent {
       this.routeError.set('Enter valid coordinates, a departure date and time.');
       return;
     }
+    const inGreaterMale = (latitude: number, longitude: number) =>
+      latitude >= 4.0 && latitude <= 4.5 && longitude >= 73.2 && longitude <= 73.8;
+    if (!inGreaterMale(originLatitude, originLongitude) || !inGreaterMale(destinationLatitude, destinationLongitude)) {
+      this.routeError.set('Both locations must be within the supported Greater Malé area.');
+      return;
+    }
     this.routeBusy.set(true);
     this.routeError.set('');
     this.routeResult.set(null);
