@@ -85,7 +85,7 @@ async function capture() {
         const navigationItem = page.locator('ui-side-nav').getByText(section, { exact: true });
         if (!await navigationItem.isVisible()) {
           // The shared layout collapses the sidebar behind its menu control on phone widths.
-          await page.locator('ui-sidebar-layout button').first().click();
+          await page.locator('button:visible').first().click();
           await navigationItem.waitFor({ state: 'visible' });
         }
         await navigationItem.click();
