@@ -327,7 +327,8 @@ export class AppComponent {
       const markers = permitMarkers(works.data?.features ?? []);
       this.permitDots.set(markers);
       this.roadCount.set(roads.data?.features.length ?? 0); this.roadsTruncated.set(roads.data?.truncated ?? false);
-      this.workCount.set(markers.length);
+      // Staff also see permits awaiting review (grey dots); the stat counts approved roadworks only.
+      this.workCount.set(markers.filter((m) => m.tone === 'warning').length);
     } catch {
       this.permitDots.set([]);
       this.mapError.set('Map layers are unavailable. Confirm sign-in, approved source data and API availability.');
