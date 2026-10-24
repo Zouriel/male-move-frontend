@@ -96,6 +96,63 @@ async function capture() {
       if (mobileOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 390px width.' });
       await page.screenshot({ path: path.join(output, filename.replace('-desktop', '-mobile')), fullPage: true });
     }
+
+    await page.setViewportSize({ width: 320, height: 780 });
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('mm-root').waitFor({ state: 'visible' });
+    await page.waitForTimeout(300);
+    for (const [section] of sections) {
+      currentScreen = `${section} phone 320px`;
+      if (section !== 'Overview') {
+        const navigationItem = page.locator('ui-side-nav').getByText(section, { exact: true });
+        if (!await navigationItem.isVisible()) {
+          await page.locator('button:visible').first().click();
+          await navigationItem.waitFor({ state: 'visible' });
+        }
+        await navigationItem.click();
+        await page.locator('header h1').getByText(section, { exact: true }).waitFor({ state: 'visible' });
+        await navigationItem.waitFor({ state: 'hidden' });
+      }
+      const narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      if (narrowOverflow) pageErrors.push({ screen: currentScreen, stack: 'Horizontal page overflow at 320px width.' });
+    }
+
+    currentScreen = 'Permit form validation';
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('mm-root').waitFor({ state: 'visible' });
+    const permitNavigation = page.locator('ui-side-nav').getByText('Permits', { exact: true });
+    if (!await permitNavigation.isVisible()) {
+      await page.locator('button:visible').first().click();
+      await permitNavigation.waitFor({ state: 'visible' });
+    }
+    await permitNavigation.click();
+    await page.locator('header h1').getByText('Permits', { exact: true }).waitFor({ state: 'visible' });
+    await permitNavigation.waitFor({ state: 'hidden' });
+    let apiRequests = 0;
+    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) apiRequests++; });
+    await page.route('**/api/**', route => route.abort());
+    await page.getByLabel('Permit number').fill('UI-AUDIT-1');
+    await page.getByLabel('Work location').fill('Malé, test location');
+    await page.getByLabel('Work description').fill('Temporary maintenance');
+    await page.getByLabel('Restriction type').selectOption('0');
+    await page.getByLabel('Start date').fill('2026-10-25');
+    await page.getByLabel('Start time (Maldives time)').fill('08:00');
+    await page.getByLabel('End date').fill('2026-10-26');
+    await page.getByLabel('End time (Maldives time)').fill('18:00');
+    const permitFile = page.locator('ui-form-renderer input[type="file"]').first();
+    const accept = await permitFile.getAttribute('accept');
+    if (!accept?.includes('.pdf') || !accept.includes('.jpg') || !accept.includes('.png')) {
+      pageErrors.push({ screen: currentScreen, stack: `Unexpected file accept filter: ${accept}` });
+    }
+    await permitFile.setInputFiles({ name: 'not-a-permit.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('test') });
+    await page.getByRole('button', { name: 'Upload and submit for review' }).click();
+    await page.getByText('Upload a PDF, JPEG or PNG permit document.').waitFor({ state: 'visible' });
+    await permitFile.setInputFiles({ name: 'oversized.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(25 * 1024 * 1024 + 1) });
+    await page.getByRole('button', { name: 'Upload and submit for review' }).click();
+    await page.getByText('The permit document must be 25 MiB or smaller.').waitFor({ state: 'visible' });
+    if (apiRequests !== 0) pageErrors.push({ screen: currentScreen, stack: `Invalid permit form made ${apiRequests} API request(s).` });
+
     if (pageErrors.length) throw new Error(`UI issues: ${JSON.stringify(pageErrors)}`);
     console.log(`Captured ${sections.length * 2} UI screenshots in ${output}`);
   } finally {

@@ -11,7 +11,16 @@ export const PERMIT_FORM: UiFormDefinition = {
     id: 'permit-details',
     title: 'Permit details',
     elements: [
-      { kind: 'field', id: 'permit-document', type: 'file', key: 'permit_document', label: 'Source permit document (PDF, JPEG or PNG; maximum 25 MiB)', required: true, props: { accept: '.pdf,.jpg,.jpeg,.png' } },
+      {
+        kind: 'field', id: 'permit-document', type: 'file', key: 'permit_document',
+        label: 'Source permit document (PDF, JPEG or PNG; maximum 25 MiB)', required: true,
+        props: { accept: '.pdf,.jpg,.jpeg,.png' },
+        validators: [
+          { id: 'permit-file-type', type: 'fileType', params: { accept: '.pdf,.jpg,.jpeg,.png' }, message: 'Upload a PDF, JPEG or PNG permit document.' },
+          { id: 'permit-file-size', type: 'maxFileSize', params: { mb: 25 }, message: 'The permit document must be 25 MiB or smaller.' },
+          { id: 'permit-file-count', type: 'maxFiles', params: { count: 1 }, message: 'Upload one permit document at a time.' },
+        ],
+      },
       { kind: 'field', id: 'permit-number', type: 'text', key: 'permit_number', label: 'Permit number', required: true },
       { kind: 'field', id: 'location-description', type: 'textarea', key: 'location_description', label: 'Work location', required: true },
       { kind: 'field', id: 'work-description', type: 'textarea', key: 'work_description', label: 'Work description', required: true },
