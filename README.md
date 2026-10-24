@@ -4,7 +4,7 @@ Angular 22 staff planning workspace using the shared `@zouriel/ui` library. It u
 
 ## Setup
 
-The UI package is hosted in GitHub Packages. Create a GitHub token with read-only package access outside the repository, then set `NODE_AUTH_TOKEN` in the shell. The `.npmrc` reads the token from the environment and contains no secret.
+The UI package is hosted in GitHub Packages. For local installs, use a classic personal access token with `read:packages` in `NODE_AUTH_TOKEN`; do not commit it. For CI, the workflow uses the short-lived `GITHUB_TOKEN` with read-only package permission. In the `@zouriel/ui` package settings, grant the `Zouriel/male-move-frontend` repository Read access under **Manage Actions access**. The `.npmrc` reads the token from the environment and contains no secret.
 
 ```sh
 npm install
@@ -28,4 +28,4 @@ Read [SECURITY.md](SECURITY.md) for deployment headers, CSP, identity and map ti
 
 ## Package access and releases
 
-Never commit `.npmrc` credentials, package tokens, identity secrets, or production configuration. CI reads `NODE_AUTH_TOKEN` from a repository secret with least-privilege read access to the UI package. Pin the UI package release used by a deployment and review its changelog before upgrading.
+Never commit `.npmrc` credentials, package tokens, identity secrets, or production configuration. CI uses the repository-scoped `GITHUB_TOKEN` with `packages: read`, and requires explicit package access for this repository. Pin the UI package release used by a deployment and review its changelog before upgrading.
