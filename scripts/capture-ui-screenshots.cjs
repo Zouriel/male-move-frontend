@@ -97,6 +97,12 @@ async function capture() {
 
   async function auditPermitForm() {
     currentScreen = 'Permit form validation on phone';
+    async function chooseDate(label, iso) {
+      await page.getByLabel(label).click();
+      const day = page.locator(`[role="dialog"] button[data-iso="${iso}"]`);
+      await day.waitFor({ state: 'visible' });
+      await day.click();
+    }
     let apiRequests = 0;
     const calls = { upload: 0, update: 0, submit: 0, list: 0 };
     let updatePayload = null;
@@ -124,9 +130,9 @@ async function capture() {
     await page.getByLabel('Work location').fill('Malé, test location');
     await page.getByLabel('Work description').fill('Temporary maintenance');
     await page.getByLabel('Restriction type').selectOption('0');
-    await page.getByLabel('Start date').fill('2026-10-25');
+    await chooseDate('Start date', '2026-10-25');
     await page.getByLabel('Start time (Maldives time)').fill('08:00');
-    await page.getByLabel('End date').fill('2026-10-26');
+    await chooseDate('End date', '2026-10-26');
     await page.getByLabel('End time (Maldives time)').fill('18:00');
     const permitFile = page.locator('ui-form-renderer input[type="file"]').first();
     const accept = await permitFile.getAttribute('accept');
@@ -134,14 +140,14 @@ async function capture() {
       pageErrors.push({ screen: currentScreen, stack: `Unexpected file accept filter: ${accept}` });
     }
     await permitFile.setInputFiles({ name: 'permit.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\nUI audit') });
-    await page.getByLabel('End date').fill('2026-10-24');
+    await chooseDate('End date', '2026-10-24');
     await page.getByRole('button', { name: 'Upload and submit for review' }).click();
     await page.getByText('End date must be on or after the start date.').waitFor({ state: 'visible' });
-    await page.getByLabel('End date').fill('2026-10-25');
+    await chooseDate('End date', '2026-10-25');
     await page.getByLabel('End time (Maldives time)').fill('07:00');
     await page.getByRole('button', { name: 'Upload and submit for review' }).click();
     await page.getByText('When the permit starts and ends on one day, end time must be later than start time.').waitFor({ state: 'visible' });
-    await page.getByLabel('End date').fill('2026-10-26');
+    await chooseDate('End date', '2026-10-26');
     await page.getByLabel('End time (Maldives time)').fill('18:00');
     await permitFile.setInputFiles({ name: 'not-a-permit.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('test') });
     await page.getByRole('button', { name: 'Upload and submit for review' }).click();

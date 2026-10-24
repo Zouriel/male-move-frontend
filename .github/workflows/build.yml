@@ -31,6 +31,7 @@ jobs:
           path: artifacts/ui-screenshots/
           retention-days: 1
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: male-move-frontend-dist
           path: dist/male-move/browser/
